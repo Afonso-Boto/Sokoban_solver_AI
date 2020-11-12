@@ -13,59 +13,17 @@
 #  Inteligência Artificial, 2014-2019
 
 from abc import ABC, abstractmethod
+from utils import *
 
-# Dominios de pesquisa
-# Permitem calcular
-# as accoes possiveis em cada estado, etc
-class SearchDomain(ABC):
-
-    # construtor
-    @abstractmethod
-    def __init__(self):
-        pass
-
-    # lista de accoes possiveis num estado
-    @abstractmethod
-    def actions(self, state):
-        pass
-
-    # resultado de uma accao num estado, ou seja, o estado seguinte
-    @abstractmethod
-    def result(self, state, action):
-        pass
-
-    # custo de uma accao num estado
-    @abstractmethod
-    def cost(self, state, action):
-        pass
-
-    # custo estimado de chegar de um estado a outro
-    @abstractmethod
-    def heuristic(self, state, goal):
-        pass
-
-    # test if the given "goal" is satisfied in "state"
-    @abstractmethod
-    def satisfies(self, state, goal):
-        pass
-
-
-# Problemas concretos a resolver
-# dentro de um determinado dominio
-class SearchProblem:
-    def __init__(self, domain, initial, goal):
-        self.domain = domain
-        self.initial = initial
-        self.goal = goal
-    def goal_test(self, state):
-        return self.domain.satisfies(state,self.goal)
+GOAL_COST = 0
+FLOOR_COST = 1
+DEADLOCK_COST = 3
 
 # Nos de uma arvore de pesquisa
 class SearchNode:
-    def __init__(self,state,parent,depth,cost,heuristic, action): 
+    def __init__(self,state,parent,cost=None,heuristic=None,action=None): 
         self.state = state
         self.parent = parent
-        self.depth = depth
         self.cost = cost
         self.heuristic = heuristic
         self.action = action
@@ -88,28 +46,19 @@ class SearchNode:
 class SokobanSolver:
 
     # construtor
-    def __init__(self,problem, strategy='breadth'): 
-        self.problem = problem
-        root = SearchNode(problem.initial,None,0,0,problem.domain.heuristic(problem.initial,problem.goal),None)
-        self.open_nodes = [root]
+    def __init__(self,level_map: Map, strategy='breadth'): 
+        self.level_map = level_map
+        self.boxes_position = []
+        self.goals_position = []
+        self.deadlocks = []
         self.strategy = strategy
-        #self.terminals = 1
-        #self.non_terminals = 0
-
-    @property
-    def length(self):
-        return self.solution.depth
-
-    # property transforma a funcao num getter
-    @property    
-    def avg_ramification(self):
-        return (self.terminals + self.non_terminals -1) / self.non_terminals
-
-    @property
-    def cost(self):
-        return self.solution.cost
-
-    # obter o caminho (sequencia de estados) da raiz ate um no
+    
+    # updates the the state of the solver   
+    def updateSolver(self,boxes_position:list,goals_position:list):
+        self.boxes_position = boxes_position
+        self.goals_position = goals_position
+    
+    # obtain the path from the initial state to the goal state
     def get_path(self,node):
         if node.parent == None:
             return [node.state]
@@ -117,49 +66,75 @@ class SokobanSolver:
         path += [node.state]
         return path
     
-    def get_plan(self, node):
-        if node.parent == None:
-            return []
-        plan = self.get_plan(node.parent)
-        plan += [node.action]
-        return plan
+    def result(self, current_pos, direction):
+        return calc_next_position(current_pos, direction)
     
-    @property
-    def plan(self):
-        return self.get_plan(self.solution)
+    def valid_actions(self, current_pos):
+        # every action that doesnt lead us into a deadlock is a valid action
+        current_pos = (current_pos[0],current_pos[1])
+        valid_directions = []
+        for direction in "wasd":
+            next_position = calc_next_position(current_pos, direction)
+            # if the next position is different from the current one 
+            # it means it will not lead to a deadlock
+            # we will also add the deadlocks into the a list for future use
+            if next_position == current_pos:
+                self.deadlocks.append(next_position)
+            else:
+                valid_directions += [direction]
+        
+        return list(set(valid_directions))
+    
+    # TODO: ver isto em condiçoes e procurar uma heuristica melhor
+    def heuristic(self, current_position, goal_position):
+        return -1*len([p for p in goal_position if p in current_position])
+    
+    def cost(self, current_position, direction):
+        next_position = calc_next_position(current_position, direction)
+        
+        # check if the next position is a goal
+        if next_position in self.goals_position:
+            return GOAL_COST
+        # check if the next position is a deadlock
+        elif next_position in self.deadlocks:
+            return DEADLOCK_COST
+        
+        #if its neither a goal nor a deadlock return the cost of a floor tile
+        return FLOOR_COST
+
+    def satisfies(self, current_state, goal_state):
+        return goal_state == current_state
 
     # procurar a solucao
-    def search(self, limit=None):
+    def search(self, start_position, goal_position):
         #permite inicializar uma nova arvore de cada vez que é chamada a funcao search
         #faz reset basicamente
-        self.terminals = 1
-        self.non_terminals = 0
-        root = SearchNode(self.problem.initial,None,0,0,self.problem.domain.heuristic(self.problem.initial, self.problem.goal),None)
+        root = SearchNode(start_position,None,cost=0,heuristic=0)
         self.open_nodes = [root]
         
         
         while self.open_nodes != []:
             node = self.open_nodes.pop(0)
-            # sempre que se chega a um no é adicionado aos nao terminais
-            self.non_terminals += 1
-            self.terminals = len(self.open_nodes)
 
-            if self.problem.goal_test(node.state):
+            if self.satisfies(node.state):
                 self.solution = node
                 return self.get_path(node)
 
             lnewnodes = []
-            for a in self.problem.domain.actions(node.state):
-                newstate = self.problem.domain.result(node.state,a)
-                                                                #custo acumulado até ao nó atual     
-                newnode = SearchNode(newstate,node,node.depth+1,node.cost+self.problem.domain.cost(node.state, a), 
-                                     self.problem.domain.heuristic(newstate,self.problem.goal),a) # estimativa da heuritica do novo no ate ao objetivo
+            for action in self.actions(node.state):
+                new_position = self.result(node.state,action)
+                
+                action_cost = self.cost(node.state, action)
+                accumulated_cost = node.cost + action_cost
+                heuristic_cost = self.heuristic(new_position, goal_position)
+                
+                new_node = SearchNode(new_position,node,cost=accumulated_cost,heuristic=heuristic_cost,action=action)
+                
                 # se o novo nó não estiver na lista de nós já percorridos 
                 # adicionar aos novos estados
-                # verifica se existe limite de profundidade, caso contrario
-                # verifica se o no esta abaixo do limite estabelecido
-                if not node.in_parent(newstate) and (limit is None or newnode.depth <= limit):
-                    lnewnodes.append(newnode)
+
+                if not node.in_parent(new_position):
+                    lnewnodes.append(new_node)
             self.add_to_open(lnewnodes)
         return None
 

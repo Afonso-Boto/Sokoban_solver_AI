@@ -38,6 +38,8 @@ Z='Z'
 class Up(Operator):
     args = [X,Y]
     # calc pos das boxes e do goal
+    # precisa de logica para dedicir os efeitos pos e negs
+    # vai ter que ser chamada a partir do agente
     pc   = [BoxOnFloor(X), BoxOnFloor(Y)]
     neg  = []
     pos  = [BoxOnGoal(X,Z),BoxOnFloor(Y)]
