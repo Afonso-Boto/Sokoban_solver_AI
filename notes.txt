@@ -1,0 +1,5 @@
+Plano de resolução:
+
+1º - obter plano de resolucao atraves do strips
+2º - usar logica para decidir o movimento do sokoban
+3º - usar pathfinding para mover??

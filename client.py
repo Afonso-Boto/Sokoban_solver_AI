@@ -2,7 +2,7 @@ import asyncio
 import getpass
 import json
 import os
-
+import pprint
 import websockets
 from mapa import Map
 
@@ -27,18 +27,26 @@ async def agent_loop(server_address="localhost:8000", agent_name="student"):
 
         while True:
             try:
-                update = json.loads(
-                    await websocket.recv()
-                )  # receive game update, this must be called timely or your game will get out of sync with the server
+                update = json.loads(await websocket.recv())  # receive game update, this must be called timely or your game will get out of sync with the server
 
                 if "map" in update:
-                    # we got a new level
+                    # we got a new level 
+                    # only runs at the beginning of a level!!!
                     game_properties = update
                     mapa = Map(update["map"])
+                    print("\n###### GAME PROPs ######\n")
+                    print(game_properties)
+
+                    print("\n###### UPDATE ######\n")
+                    pprint.pprint(update)
                 else:
                     # we got a current map state update
+                    # runs everytime a message is received
                     state = update
-
+                    print("\n###### ESTADO ######\n")
+                    pprint.pprint(state)
+                
+                
                 # Next lines are only for the Human Agent, the key values are nonetheless the correct ones!
                 key = ""
                 for event in pygame.event.get():
@@ -56,7 +64,7 @@ async def agent_loop(server_address="localhost:8000", agent_name="student"):
                             key = "d"
 
                         elif event.key == pygame.K_d:
-                            import pprint
+                            
 
                             pprint.pprint(state)
                             print(Map(f"levels/{state['level']}.xsb"))

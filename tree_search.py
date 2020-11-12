@@ -85,7 +85,7 @@ class SearchNode:
         return str(self)
 
 # Arvores de pesquisa
-class SearchTree:
+class SokobanSolver:
 
     # construtor
     def __init__(self,problem, strategy='breadth'): 
