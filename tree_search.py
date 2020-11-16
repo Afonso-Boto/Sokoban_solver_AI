@@ -1,0 +1,155 @@
+
+# Module: tree_search
+# 
+# This module provides a set o classes for automated
+# problem solving through tree search:
+#    SearchDomain  - problem domains
+#    SearchProblem - concrete problems to be solved
+#    SearchNode    - search tree nodes
+#    SearchTree    - search tree with the necessary methods for searhing
+#
+#  (c) Luis Seabra Lopes
+#  Introducao a Inteligencia Artificial, 2012-2019,
+#  Inteligência Artificial, 2014-2019
+
+from abc import ABC, abstractmethod
+from utils import *
+
+GOAL_COST = 0
+FLOOR_COST = 1
+DEADLOCK_COST = 3
+
+# Nos de uma arvore de pesquisa
+class SearchNode:
+    def __init__(self,state,parent,cost=None,heuristic=None,action=None): 
+        self.state = state
+        self.parent = parent
+        self.cost = cost
+        self.heuristic = heuristic
+        self.action = action
+
+    def in_parent(self, newstate):
+        if self.parent == None:
+            return False
+        # verifica se o novo estado e o pai do no atual
+        if self.parent.state == newstate:
+            return True
+        # verifica se o novo estado esta no caminho já percorrido (avo, bisavo, etc)
+        return self.parent.in_parent(newstate)
+
+    def __str__(self):
+        return "no(" + str(self.state) + "," + str(self.parent) + ")"
+    def __repr__(self):
+        return str(self)
+
+# Arvores de pesquisa
+class SokobanSolver:
+
+    # construtor
+    def __init__(self,level_map: Map, strategy='breadth'): 
+        self.level_map = level_map
+        self.boxes_position = []
+        self.goals_position = []
+        self.deadlocks = []
+        self.strategy = strategy
+    
+    # updates the the state of the solver   
+    def updateSolver(self,boxes_position:list,goals_position:list):
+        self.boxes_position = boxes_position
+        self.goals_position = goals_position
+    
+    # obtain the path from the initial state to the goal state
+    def get_path(self,node):
+        if node.parent == None:
+            return [node.state]
+        path = self.get_path(node.parent)
+        path += [node.state]
+        return path
+    
+    def result(self, current_pos, direction):
+        return calc_next_position(current_pos, direction)
+    
+    def valid_actions(self, current_pos):
+        # every action that doesnt lead us into a deadlock is a valid action
+        current_pos = (current_pos[0],current_pos[1])
+        valid_directions = []
+        for direction in "wasd":
+            next_position = calc_next_position(current_pos, direction)
+            # if the next position is different from the current one 
+            # it means it will not lead to a deadlock
+            # we will also add the deadlocks into the a list for future use
+            if next_position == current_pos:
+                self.deadlocks.append(next_position)
+            else:
+                valid_directions += [direction]
+        
+        return list(set(valid_directions))
+    
+    # TODO: ver isto em condiçoes e procurar uma heuristica melhor
+    def heuristic(self, current_position, goal_position):
+        return -1*len([p for p in goal_position if p in current_position])
+    
+    def cost(self, current_position, direction):
+        next_position = calc_next_position(current_position, direction)
+        
+        # check if the next position is a goal
+        if next_position in self.goals_position:
+            return GOAL_COST
+        # check if the next position is a deadlock
+        elif next_position in self.deadlocks:
+            return DEADLOCK_COST
+        
+        #if its neither a goal nor a deadlock return the cost of a floor tile
+        return FLOOR_COST
+
+    def satisfies(self, current_state, goal_state):
+        return goal_state == current_state
+
+    # procurar a solucao
+    def search(self, start_position, goal_position):
+        #permite inicializar uma nova arvore de cada vez que é chamada a funcao search
+        #faz reset basicamente
+        root = SearchNode(start_position,None,cost=0,heuristic=0)
+        self.open_nodes = [root]
+        
+        
+        while self.open_nodes != []:
+            node = self.open_nodes.pop(0)
+
+            if self.satisfies(node.state):
+                self.solution = node
+                return self.get_path(node)
+
+            lnewnodes = []
+            for action in self.actions(node.state):
+                new_position = self.result(node.state,action)
+                
+                action_cost = self.cost(node.state, action)
+                accumulated_cost = node.cost + action_cost
+                heuristic_cost = self.heuristic(new_position, goal_position)
+                
+                new_node = SearchNode(new_position,node,cost=accumulated_cost,heuristic=heuristic_cost,action=action)
+                
+                # se o novo nó não estiver na lista de nós já percorridos 
+                # adicionar aos novos estados
+
+                if not node.in_parent(new_position):
+                    lnewnodes.append(new_node)
+            self.add_to_open(lnewnodes)
+        return None
+
+    # juntar novos nos a lista de nos abertos de acordo com a estrategia
+    def add_to_open(self,lnewnodes):
+        if self.strategy == 'breadth':
+            self.open_nodes.extend(lnewnodes)
+        elif self.strategy == 'depth':
+            self.open_nodes[:0] = lnewnodes
+        elif self.strategy == 'uniform':
+            self.open_nodes.extend(lnewnodes)
+            self.open_nodes.sort(key=lambda node: node.cost)
+        elif self.strategy == 'greedy':
+            self.open_nodes.extend(lnewnodes)
+            self.open_nodes.sort(key=lambda node: node.heuristic)
+        elif self.strategy == 'a*':
+            self.open_nodes.extend(lnewnodes)
+            self.open_nodes.sort(key=lambda node: node.cost + node.heuristic)
