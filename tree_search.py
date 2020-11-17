@@ -116,7 +116,7 @@ class SokobanSolver:
 
     def satisfies(self, current_state, goal_state):
         # 'boxes' ser substituido por goal? embora acho que seja a mesma coisa
-        return goal_state['boxes'] == current_state['boxes']
+        return sorted(goal_state['boxes']) == sorted(current_state['boxes'])
 
     # procurar a solucao
     def search(self, start_position, goal_position):
