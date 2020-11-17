@@ -26,8 +26,6 @@ def isDeadlock(self, pos):
     i_x = 0 #number of horizontal wall next to the pos i
     i_y = 0 #number of vertical wall next to the pos i
 
-    if pos in empty_goals:
-        return False
 
     if is_blocked((pos[0] + 1, pos[1])) or is_blocked((pos[0] - 1, pos[1])):
         i_x += 1
@@ -35,7 +33,7 @@ def isDeadlock(self, pos):
     if is_blocked((pos[0], pos[1] + 1)) or is_blocked((pos[0], pos[1] - 1)):
         i_y += 1
     
-    if i_x > 0 and i_y > 0:
+    if i_x > 0 and i_y > 0 and pos not in empty_goals: # verifies if is not on a corner and if it is, make sure it's not a goal
         return True
     
     return False
