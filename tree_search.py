@@ -19,6 +19,8 @@ GOAL_COST = 0
 FLOOR_COST = 1
 DEADLOCK_COST = 3
 
+DIRECTIONS = ["w","a","s","d"]
+
 # Nos de uma arvore de pesquisa
 class SearchNode:
     def __init__(self,state,parent,cost=None,heuristic=None,action=None): 
@@ -66,22 +68,25 @@ class SokobanSolver:
         path += [node.state]
         return path
     
+    # TODO: fix erro
     def result(self, current_pos, direction):
         return calc_next_position(current_pos, direction)
     
-    def valid_actions(self, current_pos):
+    def actions(self, current_pos):
         # every action that doesnt lead us into a deadlock is a valid action
-        current_pos = (current_pos[0],current_pos[1])
+        state = current_pos['boxes']
         valid_directions = []
-        for direction in "wasd":
-            next_position = calc_next_position(current_pos, direction)
+        print(state)
+        for box in state:            
+            for direction in DIRECTIONS:
+                next_position = calc_next_position(box,direction)
             # if the next position is different from the current one 
             # it means it will not lead to a deadlock
             # we will also add the deadlocks into the a list for future use
-            if next_position == current_pos:
-                self.deadlocks.append(next_position)
-            else:
-                valid_directions += [direction]
+                if next_position == current_pos:
+                    self.deadlocks.append(next_position)
+                else:
+                    valid_directions += [direction]
         
         return list(set(valid_directions))
     
@@ -116,7 +121,7 @@ class SokobanSolver:
         while self.open_nodes != []:
             node = self.open_nodes.pop(0)
 
-            if self.satisfies(node.state):
+            if self.satisfies(node.state,goal_position):
                 self.solution = node
                 return self.get_path(node)
 
