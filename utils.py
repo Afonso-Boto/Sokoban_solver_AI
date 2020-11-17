@@ -2,7 +2,6 @@ from mapa import Map
 
 def calc_next_position(current, direction):
     assert direction in "wasd"
-    print(type(current))
     curr_x, curr_y = current
     
     if direction == 'w':

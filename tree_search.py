@@ -70,13 +70,18 @@ class SokobanSolver:
     
     # TODO: fix erro
     def result(self, current_pos, direction):
-        return calc_next_position(current_pos, direction)
+        state = current_pos['boxes']
+        results = []
+        for box in state:
+            results.append(calc_next_position(box, direction))
+        print(results)
+        return results
     
     def actions(self, current_pos):
         # every action that doesnt lead us into a deadlock is a valid action
+        print(current_pos)
         state = current_pos['boxes']
         valid_directions = []
-        print(state)
         for box in state:            
             for direction in DIRECTIONS:
                 next_position = calc_next_position(box,direction)
@@ -87,15 +92,17 @@ class SokobanSolver:
                     self.deadlocks.append(next_position)
                 else:
                     valid_directions += [direction]
-        
         return list(set(valid_directions))
     
     # TODO: ver isto em condiçoes e procurar uma heuristica melhor
     def heuristic(self, current_position, goal_position):
         return -1*len([p for p in goal_position if p in current_position])
     
-    def cost(self, current_position, direction):
-        next_position = calc_next_position(current_position, direction)
+    def cost(self, current_pos, direction):
+        state = current_pos['boxes']
+        valid_directions = []
+        for box in state:           
+            next_position = calc_next_position(box, direction)
         
         # check if the next position is a goal
         if next_position in self.goals_position:
@@ -108,7 +115,8 @@ class SokobanSolver:
         return FLOOR_COST
 
     def satisfies(self, current_state, goal_state):
-        return goal_state == current_state
+        # 'boxes' ser substituido por goal? embora acho que seja a mesma coisa
+        return goal_state['boxes'] == current_state['boxes']
 
     # procurar a solucao
     def search(self, start_position, goal_position):
@@ -126,6 +134,7 @@ class SokobanSolver:
                 return self.get_path(node)
 
             lnewnodes = []
+            # para cada ação na lista de ações possíveis
             for action in self.actions(node.state):
                 new_position = self.result(node.state,action)
                 
