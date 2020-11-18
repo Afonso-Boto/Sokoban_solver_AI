@@ -7,9 +7,6 @@ import websockets
 
 from agent import SokobanAgent
 from mapa import Map
-from consts import Tiles
-
-import random
 
 async def solver(puzzle, solution):
     while True:
@@ -18,11 +15,10 @@ async def solver(puzzle, solution):
         print(mapa)
 
         agent = SokobanAgent(mapa,game_properties)
-        keys = agent.search()
-        asyncio.sleep(0)
+        keys = await agent.search()
+
         print(keys)
 
-        #keys = "sawdddsawaassdwawdwwasdssddwasaww"
         await solution.put(keys)
 
 async def agent_loop(puzzle, solution, server_address="localhost:8000", agent_name="student"):

@@ -1,25 +1,37 @@
-from mapa import Map
+#from mapa import Map
 
-def calc_next_position(current, direction):
-    assert direction in "wasd"
-    curr_x, curr_y = current
+def calc_next_state(current_state, direction):
+    curr_x, curr_y = current_state['keeper']
+    boxes = current_state['boxes'][:]
     
     if direction == 'w':
         next_positon = curr_x, curr_y-1
+        if next_positon in boxes:
+            boxes.remove(next_positon)
+            boxes.append((curr_x, curr_y-2))
+    
     if direction == 'a':
         next_positon = curr_x-1, curr_y
+        if next_positon in boxes:
+            boxes.remove(next_positon)
+            boxes.append((curr_x-2, curr_y))
+                  
     if direction == 's':
         next_positon = curr_x, curr_y+1
+        if next_positon in boxes:
+            boxes.remove(next_positon)
+            boxes.append((curr_x, curr_y+2))
+            
     if direction == 'd':
         next_positon = curr_x+1, curr_y
-        
-    # verifica se a posição calculada é um deadlock
-    # TODO: possivelmente retornar None em vez da posição atual?    
-    #if Map.is_blocked(Map,next_positon):
-    #    return current
-        
-    return next_positon
+        if next_positon in boxes:
+            boxes.remove(next_positon)
+            boxes.append((curr_x+2, curr_y))
+    
+    next_state = {'keeper': next_positon, 'boxes': boxes, 'goals':current_state['goals']}  
+    return next_state
 
+'''
 def isDeadlock(self, pos):
     i_x = 0 #number of horizontal wall next to the pos i
     i_y = 0 #number of vertical wall next to the pos i
@@ -33,4 +45,4 @@ def isDeadlock(self, pos):
     if i_x > 0 and i_y > 0 and pos not in Map.empty_goals: # verifies if is not on a corner and if it is, make sure it's not a goal
         return True
     
-    return False
+    return False '''

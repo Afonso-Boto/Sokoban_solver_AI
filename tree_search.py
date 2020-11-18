@@ -1,23 +1,11 @@
-
-# Module: tree_search
-# 
-# This module provides a set o classes for automated
-# problem solving through tree search:
-#    SearchDomain  - problem domains
-#    SearchProblem - concrete problems to be solved
-#    SearchNode    - search tree nodes
-#    SearchTree    - search tree with the necessary methods for searhing
-#
-#  (c) Luis Seabra Lopes
-#  Introducao a Inteligencia Artificial, 2012-2019,
-#  Inteligência Artificial, 2014-2019
-
-from abc import ABC, abstractmethod
+from mapa import Map
 from utils import *
 
 GOAL_COST = 0
 FLOOR_COST = 1
+KEEPER_MOVE_COST = 2
 DEADLOCK_COST = 3
+
 
 DIRECTIONS = ["w","a","s","d"]
 
@@ -46,7 +34,6 @@ class SearchNode:
 
 # Arvores de pesquisa
 class SokobanSolver:
-
     # construtor
     def __init__(self,level_map: Map, strategy='breadth'): 
         self.level_map = level_map
@@ -55,12 +42,9 @@ class SokobanSolver:
         self.deadlocks = []
         self.strategy = strategy
     
-    # updates the the state of the solver   
-    def updateSolver(self,boxes_position:list,goals_position:list):
-        self.boxes_position = boxes_position
-        self.goals_position = goals_position
     
     # obtain the path from the initial state to the goal state
+    # TODO: change the return, it should only return the move and not the whole state
     def get_path(self,node):
         if node.parent == None:
             return [node.state]
@@ -68,86 +52,132 @@ class SokobanSolver:
         path += [node.state]
         return path
     
-    # TODO: fix erro
-    def result(self, current_pos, direction):
-        state = current_pos['boxes']
-        results = []
-        for box in state:
-            results.append(calc_next_position(box, direction))
-        print(results)
-        return results
+
+    def result(self, current_state, direction):
+        '''
+            RECEIVES: the current state and a direction (action)
+            RETURNS: the next state 
+            
+            Calculates the next state given the current state and a direction (action):
+                -> Receives a dictionary containing the current state
+                -> Calculates the next state (positions of the keeper and boxes)
+                -> Returns the new state calculated
+        '''
+        next_state = calc_next_state(current_state, direction)
+        return next_state
     
-    def actions(self, current_pos):
-        # every action that doesnt lead us into a deadlock is a valid action
-        print(current_pos)
-        state = current_pos['boxes']
+    
+    def actions(self, current_state):
+        '''
+            RECEIVES: the current state
+            RETURNS: a list containing all the valid actions for the state
+            
+            Calculates all the valid actions for a state:
+                -> Receives a dictionary containing the current state
+                -> For every direction in "wasd" calculates the next state (positions of the keeper and boxes)
+                -> Verifies wether the boxes are in a deadlock
+                -> Return a list of valid actions (directions)
+        '''
         valid_directions = []
-        for box in state:            
-            for direction in DIRECTIONS:
-                next_position = calc_next_position(box,direction)
-            # if the next position is different from the current one 
-            # it means it will not lead to a deadlock
-            # we will also add the deadlocks into the a list for future use
-                if next_position == current_pos:
-                    self.deadlocks.append(next_position)
-                else:
-                    valid_directions += [direction]
+        for direction in DIRECTIONS:
+            next_state = calc_next_state(current_state,direction)
+            keeper = next_state['keeper']
+            boxes = next_state['boxes'][:]
+            
+            valid_directions.extend(direction)
+            if Map.is_blocked(self.level_map,keeper):
+                valid_directions.remove(direction)
+            
+            for box in boxes:
+                if Map.is_blocked(self.level_map,box) or self.isDeadlock(box):
+                    self.deadlocks.extend(box)
+                    valid_directions.remove(direction)
         return list(set(valid_directions))
     
-    # TODO: ver isto em condiçoes e procurar uma heuristica melhor
+    # TODO: NEEDS REWORK!
     def heuristic(self, current_position, goal_position):
         return -1*len([p for p in goal_position if p in current_position])
     
-    def cost(self, current_pos, direction):
-        state = current_pos['boxes']
-        valid_directions = []
-        for box in state:           
-            next_position = calc_next_position(box, direction)
+    
+    def cost(self, current_state, direction):
+        ''' 
+        RECEIVES: the current state and a direction (action)
+        RETURNS: the cost of achieving the next state 
+            
+        Calculates the next state given the current state and a direction (action):
+            -> Receives a dictionary containing the current state
+            -> Calculates the next state (positions of the keeper and boxes)
+            -> Returns the cost of achieving the new state
+        '''
+        prev_boxes = current_state['boxes'][:]
+        next_state = calc_next_state(current_state, direction)
+            # check if the next position is a goal
         
-        # check if the next position is a goal
-        if next_position in self.goals_position:
-            return GOAL_COST
-        # check if the next position is a deadlock
-        elif next_position in self.deadlocks:
-            return DEADLOCK_COST
+        boxes = next_state['boxes'][:]
+        boxes.sort()
+        prev_boxes.sort()
+        for box in boxes:
+            if box in self.goals_position:
+                return GOAL_COST
+                # check if the next position is a deadlock
+            elif box in self.deadlocks:
+                return DEADLOCK_COST
         
-        #if its neither a goal nor a deadlock return the cost of a floor tile
-        return FLOOR_COST
+        # if we moved a box into a normal floor tile    
+        if str(boxes) != str(prev_boxes):
+            return FLOOR_COST
+        
+        #if its neither a goal, a deadlock nor moved a box return the cost of a keeper move
+        return KEEPER_MOVE_COST
 
-    def satisfies(self, current_state, goal_state):
-        # 'boxes' ser substituido por goal? embora acho que seja a mesma coisa
-        return sorted(goal_state['boxes']) == sorted(current_state['boxes'])
+    def satisfies(self, current_state):
+        ''' 
+        RECEIVES: current state
+        RETURNS: True or False
+        
+        Verifies if all the boxes are placed on the goals:
+            -> Receives a dictionary containing the current state
+            -> Sorts the lists containing the positions of the boxes and goals
+            -> Checks wether the lists are equal
+        '''
+        current_state['boxes'].sort()
+        current_state['goals'].sort()
+        return current_state['boxes'] == current_state['goals']
 
     # procurar a solucao
-    def search(self, start_position, goal_position):
+    def search(self, state, goal_state):
         #permite inicializar uma nova arvore de cada vez que é chamada a funcao search
         #faz reset basicamente
-        root = SearchNode(start_position,None,cost=0,heuristic=0)
+        root = SearchNode(state,None,cost=0,heuristic=0)
         self.open_nodes = [root]
-        
         
         while self.open_nodes != []:
             node = self.open_nodes.pop(0)
 
-            if self.satisfies(node.state,goal_position):
+            if self.satisfies(node.state):
+                print("cheguei aqui")
                 self.solution = node
                 return self.get_path(node)
 
             lnewnodes = []
             # para cada ação na lista de ações possíveis
+            # TODO: ver actions
             for action in self.actions(node.state):
-                new_position = self.result(node.state,action)
-                
+                new_state = self.result(node.state,action)
+                print(new_state)
+                # TODO: rework these functions
                 action_cost = self.cost(node.state, action)
-                accumulated_cost = node.cost + action_cost
-                heuristic_cost = self.heuristic(new_position, goal_position)
+                print(action_cost)
+                #accumulated_cost = node.cost + action_cost
+                #heuristic_cost = self.heuristic(new_state, goal_state)
                 
-                new_node = SearchNode(new_position,node,cost=accumulated_cost,heuristic=heuristic_cost,action=action)
+                #new_node = SearchNode(new_state,node,cost=accumulated_cost,heuristic=heuristic_cost,action=action)
+                new_node = SearchNode(new_state,node,0,0,0)
                 
                 # se o novo nó não estiver na lista de nós já percorridos 
                 # adicionar aos novos estados
 
-                if not node.in_parent(new_position):
+                if not node.in_parent(new_state):
                     lnewnodes.append(new_node)
             self.add_to_open(lnewnodes)
         return None
@@ -156,8 +186,6 @@ class SokobanSolver:
     def add_to_open(self,lnewnodes):
         if self.strategy == 'breadth':
             self.open_nodes.extend(lnewnodes)
-        elif self.strategy == 'depth':
-            self.open_nodes[:0] = lnewnodes
         elif self.strategy == 'uniform':
             self.open_nodes.extend(lnewnodes)
             self.open_nodes.sort(key=lambda node: node.cost)
@@ -167,3 +195,16 @@ class SokobanSolver:
         elif self.strategy == 'a*':
             self.open_nodes.extend(lnewnodes)
             self.open_nodes.sort(key=lambda node: node.cost + node.heuristic)
+
+    # auxiliary method for calculating deadlocks
+    def isDeadlock(self, pos):
+        i_x = 0 #number of horizontal wall next to the pos i
+        i_y = 0 #number of vertical wall next to the pos i
+
+        if Map.is_blocked(self.level_map,(pos[0] + 1, pos[1])) or Map.is_blocked(self.level_map,(pos[0] - 1, pos[1])):
+            i_x += 1
+        if Map.is_blocked(self.level_map,(pos[0], pos[1] + 1)) or Map.is_blocked(self.level_map,(pos[0], pos[1] - 1)):
+            i_y += 1
+        if i_x > 0 and i_y > 0 and str(pos) not in str(Map.empty_goals): # verifies if is not on a corner and if it is, make sure it's not a goal
+            return True
+        return False
