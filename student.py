@@ -3,52 +3,56 @@ import getpass
 import json
 import os
 import pprint
-import random
-
 import websockets
 
-from consts import Tiles
+from agent import SokobanAgent
 from mapa import Map
 
+async def solver(puzzle, solution):
+    while True:
+        game_properties = await puzzle.get()
+        mapa = Map(game_properties["map"])
+        print(mapa)
 
-async def agent_loop(server_address="localhost:8000", agent_name="student"):
+        agent = SokobanAgent(mapa,game_properties)
+        keys = await agent.search()
+
+        print(keys)
+
+        await solution.put(keys)
+
+async def agent_loop(puzzle, solution, server_address="localhost:8000", agent_name="student"):
     async with websockets.connect(f"ws://{server_address}/player") as websocket:
 
         # Receive information about static game properties
         await websocket.send(json.dumps({"cmd": "join", "name": agent_name}))
-        msg = await websocket.recv()
-        game_properties = json.loads(msg)
-        # You can create your own map representation or use the game representation:
-        mapa = Map(game_properties["map"])
-        #print(mapa)
-
-        keys = ["w","a", "s", "d"]
-
+        
         while True:
             try:
-                # receive game state, this must be called timely or the game will get out of sync with the server
-                state = json.loads(await websocket.recv())
-                print("###### STATE ######\n")
-                pprint.pprint(state)
-                #print(Map(f"levels/{state['level']}.xsb"))
-                # goals vazios
-                print("\n###### EMPTY GOALS ######\n")
-                print(mapa.empty_goals)
+                # receive game update, this must be called timely or your game will get out of sync with the server
+                update = json.loads(await websocket.recv())  
+                
+                if "map" in update:
+                    # we got a new level
+                    # only runs at the beginning of a level!!!
+                    game_properties = update
+                    keys = ""
+                    await puzzle.put(game_properties)
 
-                # todos os goals do mapa
-                print("\n###### GOALS ######\n")
-                print(mapa.filter_tiles([Tiles.GOAL, Tiles.BOX_ON_GOAL]))
+                if not solution.empty():
+                    keys = await solution.get()
 
-                key = random.choice(keys)
-
-                # send key command to server - you must implement this send in the AI agent
+                key = ""
+                if len(keys):  # we got a solution!
+                    key = keys[0]
+                    keys = keys[1:]
+                                
+                # send key command to server
                 await websocket.send(json.dumps({"cmd": "key", "key": key}))
-
-
+            
             except websockets.exceptions.ConnectionClosedOK:
                 print("Server has cleanly disconnected us")
                 return
-
 
 # DO NOT CHANGE THE LINES BELLOW
 # You can change the default values using the command line, example:
@@ -57,4 +61,12 @@ loop = asyncio.get_event_loop()
 SERVER = os.environ.get("SERVER", "localhost")
 PORT = os.environ.get("PORT", "8000")
 NAME = os.environ.get("NAME", getpass.getuser())
-loop.run_until_complete(agent_loop(f"{SERVER}:{PORT}", NAME))
+
+puzzle = asyncio.Queue(loop=loop)
+solution = asyncio.Queue(loop=loop)
+
+net_task = loop.create_task(agent_loop(puzzle, solution, f"{SERVER}:{PORT}", NAME))
+solver_task = loop.create_task(solver(puzzle, solution))
+
+loop.run_until_complete(asyncio.gather(net_task, solver_task))
+loop.close()
