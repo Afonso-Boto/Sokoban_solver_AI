@@ -1,5 +1,6 @@
 from mapa import Map
 from utils import *
+import asyncio
 
 GOAL_COST = 0
 FLOOR_COST = 1
@@ -11,7 +12,7 @@ DIRECTIONS = ["w","a","s","d"]
 
 # Nos de uma arvore de pesquisa
 class SearchNode:
-    def __init__(self,state,parent,cost=None,heuristic=None,action=None): 
+    def __init__(self,state,parent,cost=None,heuristic=None,action=''): 
         self.state = state
         self.parent = parent
         self.cost = cost
@@ -35,21 +36,21 @@ class SearchNode:
 # Arvores de pesquisa
 class SokobanSolver:
     # construtor
-    def __init__(self,level_map: Map, strategy='breadth'): 
+    def __init__(self,level_map: Map, strategy='breadth', method='manhatan'): 
         self.level_map = level_map
         self.boxes_position = []
         self.goals_position = []
         self.deadlocks = []
         self.strategy = strategy
+        self.method = method
     
     
     # obtain the path from the initial state to the goal state
-    # TODO: change the return, it should only return the move and not the whole state
     def get_path(self,node):
         if node.parent == None:
-            return [node.state]
+            return [node.action]
         path = self.get_path(node.parent)
-        path += [node.state]
+        path += [node.action]
         return path
     
 
@@ -88,17 +89,27 @@ class SokobanSolver:
             if Map.is_blocked(self.level_map,keeper):
                 valid_directions.remove(direction)
             
+            # TODO: VER SE CAIXAS NAO ESTAO UMA EM CIMA DA OUTRA
+            a = list(set(boxes))
+            if len(a) < len (boxes):
+                valid_directions.remove(direction)
             for box in boxes:
-                if Map.is_blocked(self.level_map,box) or self.isDeadlock(box):
-                    self.deadlocks.extend(box)
+                if self.isDeadlock(box):
+                    self.deadlocks.extend(next_state)
                     valid_directions.remove(direction)
         return list(set(valid_directions))
     
-    # TODO: NEEDS REWORK!
-    def heuristic(self, current_position, goal_position):
-        return -1*len([p for p in goal_position if p in current_position])
-    
-    
+
+    def heuristic(self, current_state,method):
+        keeper = current_state['keeper']
+        boxes = current_state['boxes']
+        goals = current_state['goals']
+        heuristic = calc_distance(keeper,boxes,method)
+        for box in boxes:
+            heuristic += calc_distance(box,goals, method)
+        return heuristic
+        
+        
     def cost(self, current_state, direction):
         ''' 
         RECEIVES: the current state and a direction (action)
@@ -145,39 +156,40 @@ class SokobanSolver:
         return current_state['boxes'] == current_state['goals']
 
     # procurar a solucao
-    def search(self, state, goal_state):
+    async def search(self, state):
         #permite inicializar uma nova arvore de cada vez que é chamada a funcao search
         #faz reset basicamente
         root = SearchNode(state,None,cost=0,heuristic=0)
         self.open_nodes = [root]
         
         while self.open_nodes != []:
+            await asyncio.sleep(0)
             node = self.open_nodes.pop(0)
 
             if self.satisfies(node.state):
-                print("cheguei aqui")
                 self.solution = node
                 return self.get_path(node)
 
             lnewnodes = []
             # para cada ação na lista de ações possíveis
-            # TODO: ver actions
             for action in self.actions(node.state):
                 new_state = self.result(node.state,action)
-                print(new_state)
-                # TODO: rework these functions
-                action_cost = self.cost(node.state, action)
-                print(action_cost)
-                #accumulated_cost = node.cost + action_cost
-                #heuristic_cost = self.heuristic(new_state, goal_state)
                 
-                #new_node = SearchNode(new_state,node,cost=accumulated_cost,heuristic=heuristic_cost,action=action)
-                new_node = SearchNode(new_state,node,0,0,0)
-                
+                if (new_state not in self.deadlocks):
+                    if node.in_parent(new_state):
+                        continue
+                    else:
+                        #new_node = SearchNode(state=new_state,parent=node,cost=node.cost+self.cost(node.state,action),
+                        #   heuristic=self.heuristic(new_state, self.method),action=action)
+                        
+                        # para funcionar com a*
+                        # TODO: ver isto
+                        new_node = SearchNode(state=new_state,parent=node,cost=self.cost(node.state,action),
+                            heuristic=self.heuristic(new_state, self.method),action=action)
+                        
                 # se o novo nó não estiver na lista de nós já percorridos 
                 # adicionar aos novos estados
-
-                if not node.in_parent(new_state):
+                #if not node.in_parent(new_state):
                     lnewnodes.append(new_node)
             self.add_to_open(lnewnodes)
         return None
@@ -194,17 +206,19 @@ class SokobanSolver:
             self.open_nodes.sort(key=lambda node: node.heuristic)
         elif self.strategy == 'a*':
             self.open_nodes.extend(lnewnodes)
-            self.open_nodes.sort(key=lambda node: node.cost + node.heuristic)
+            self.open_nodes.sort(key=lambda node: (node.cost + node.heuristic))
 
     # auxiliary method for calculating deadlocks
     def isDeadlock(self, pos):
         i_x = 0 #number of horizontal wall next to the pos i
         i_y = 0 #number of vertical wall next to the pos i
-
+        
+        if Map.is_blocked(self.level_map,pos):
+            return True
         if Map.is_blocked(self.level_map,(pos[0] + 1, pos[1])) or Map.is_blocked(self.level_map,(pos[0] - 1, pos[1])):
             i_x += 1
         if Map.is_blocked(self.level_map,(pos[0], pos[1] + 1)) or Map.is_blocked(self.level_map,(pos[0], pos[1] - 1)):
             i_y += 1
-        if i_x > 0 and i_y > 0 and str(pos) not in str(Map.empty_goals): # verifies if is not on a corner and if it is, make sure it's not a goal
-            return True
+        #if i_x > 0 and i_y > 0 and str(pos) not in str(Map.empty_goals): # verifies if is not on a corner and if it is, make sure it's not a goal
+        #    return True
         return False
