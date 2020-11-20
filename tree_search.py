@@ -2,9 +2,9 @@ from mapa import Map
 from utils import *
 import asyncio
 
-GOAL_COST = 0
-FLOOR_COST = 0.2
-KEEPER_MOVE_COST = 0.40
+GOAL_COST = 1
+FLOOR_COST = 2
+KEEPER_MOVE_COST = 3
 #DEADLOCK_COST = 50
 
 
@@ -55,8 +55,8 @@ class SokobanSolver:
         
         return path
     
-    def has_path(self, BoxPos):
-        return self.get_path(node) != []
+    #def has_path(self, BoxPos):
+    #    return self.get_path(node) != []
 
     def result(self, current_state, direction):
         '''
@@ -89,24 +89,22 @@ class SokobanSolver:
             keeper = next_state['keeper']
             boxes = next_state['boxes'][:]
             
-            valid_directions.extend(direction)
+            valid_directions.append(direction)
             if Map.is_blocked(self.level_map,keeper):
                 valid_directions.remove(direction)
             
-            # VER SE CAIXAS NAO ESTAO UMA EM CIMA DA OUTRA
-            a = list(set(boxes))
-            if len(a) < len (boxes):
+            # Check wether we are placing a box on top of another            
+            if len(list(set(boxes))) < len (boxes):
                 valid_directions.remove(direction)
             
             for box in boxes:
+                ''' Estas verificações não poupam grande coisa em termo de nós abertos '''
                 if box in self.deadlocks_pos:
-                    valid_directions.remove(direction)
-
+                    valid_directions.remove(direction)                    
                 elif self.isDeadlock(box):
                     self.deadlocks_pos.append(box)                
                     self.deadlocks.append(next_state)
                     valid_directions.remove(direction)
-
         return list(set(valid_directions))
     
 
@@ -114,12 +112,10 @@ class SokobanSolver:
         keeper = current_state['keeper']
         boxes = current_state['boxes']
         goals = current_state['goals']
-        heuristic = calc_distance(keeper,boxes,'manhatan')
-        heuristic2 = calc_distance(keeper,boxes,'euclidean')
+        heuristic = calc_distance(keeper,boxes,method)
         for box in boxes:
-            heuristic += calc_distance(box,goals, 'manhatan')
-            heuristic2 = calc_distance(box,goals,'euclidean')
-        return max(heuristic,heuristic2)
+            heuristic += calc_distance(box,goals,method)
+        return heuristic
         
         
     def cost(self, current_state, direction):
@@ -137,18 +133,18 @@ class SokobanSolver:
             # check if the next position is a goal
         
         boxes = next_state['boxes'][:]
-        boxes.sort()
-        prev_boxes.sort()
         for box in boxes:
             if box in self.goals_position:
                 return GOAL_COST
                 # check if the next position is a deadlock
             
             #isto acho que nao faz nada, nunca vemos o custo de um estado se ele for um deadlock
-            #elif box in self.deadlocks:
+            #elif box in self.deadlocks_pos:
             #    return DEADLOCK_COST
         
         # if we moved a box into a normal floor tile    
+        boxes.sort()
+        prev_boxes.sort()
         if str(boxes) != str(prev_boxes):
             return FLOOR_COST
         
@@ -173,14 +169,17 @@ class SokobanSolver:
     async def search(self, state):
         #permite inicializar uma nova arvore de cada vez que é chamada a funcao search
         #faz reset basicamente
-        root = SearchNode(state,None,cost=0,heuristic=0)
+        root = SearchNode(state,None,cost=0,heuristic=self.heuristic(state,self.method))
         self.open_nodes = [root]
+        open_nodes = 0
+        print("HEURISTIC: ", self.heuristic(state,self.method))
         
         while self.open_nodes != []:
             await asyncio.sleep(0)
             node = self.open_nodes.pop(0)
 
             if self.satisfies(node.state):
+                print("OPEN NODES ", open_nodes)
                 return self.get_path(node)
 
             lnewnodes = []
@@ -194,12 +193,19 @@ class SokobanSolver:
                         continue
                         #new_node = SearchNode(state=new_state,parent=node,cost=node.cost+self.cost(node.state,action),
                         #   heuristic=self.heuristic(new_state, self.method),action=action)
-                        
-                    # para funcionar com a*
-                    # TODO: ver isto
-                    new_node = SearchNode(state=new_state,parent=node,cost=self.cost(node.state,action),
-                            heuristic=self.heuristic(new_state, self.method),action=action)
-                                
+                    
+                    cost = self.cost(node.state,action)
+                
+                    print("COST: ", cost)
+                    acc_cost = node.cost + cost
+                    print("ACC COST: ", acc_cost)
+                    print("HEURISTIC: ", self.heuristic(new_state,self.method))
+                        # para funcionar com a*
+                        # TODO: ver isto
+                    new_node = SearchNode(state=new_state,parent=node,cost=cost,
+                                heuristic=self.heuristic(new_state, self.method),action=action)
+                    open_nodes += 1   
+                    print("OPEN NODES UNTIL NOW: ", open_nodes)   
                     lnewnodes.append(new_node)
             self.add_to_open(lnewnodes)
         return None

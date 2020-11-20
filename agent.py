@@ -15,7 +15,7 @@ class SokobanAgent:
         self.initial_state = {'boxes': self.boxes, 'keeper': self.keeper, 'goals':self.goals}
         #self.goal_state = {'boxes': self.goals,'goals':self.goals}
         self.prev_state = {}
-        self.path_finder : SokobanSolver = SokobanSolver(level_map = level, strategy='a*')
+        self.path_finder : SokobanSolver = SokobanSolver(level_map = level, strategy='a*',method='mixed')
         
     @property
     def state(self):
