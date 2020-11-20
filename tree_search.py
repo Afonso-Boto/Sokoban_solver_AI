@@ -43,6 +43,7 @@ class SokobanSolver:
         self.deadlocks = []
         self.strategy = strategy
         self.method = method
+        self.deadlocks_pos = []
     
     
     # obtain the path from the initial state to the goal state
@@ -51,8 +52,11 @@ class SokobanSolver:
             return [node.action]
         path = self.get_path(node.parent)
         path += [node.action]
+        
         return path
     
+    def has_path(self, BoxPos):
+        return self.get_path(node) != []
 
     def result(self, current_state, direction):
         '''
@@ -89,14 +93,20 @@ class SokobanSolver:
             if Map.is_blocked(self.level_map,keeper):
                 valid_directions.remove(direction)
             
-            # TODO: VER SE CAIXAS NAO ESTAO UMA EM CIMA DA OUTRA
+            # VER SE CAIXAS NAO ESTAO UMA EM CIMA DA OUTRA
             a = list(set(boxes))
             if len(a) < len (boxes):
                 valid_directions.remove(direction)
+            
             for box in boxes:
-                if self.isDeadlock(box):
-                    self.deadlocks.extend(next_state)
+                if box in self.deadlocks_pos:
                     valid_directions.remove(direction)
+
+                elif self.isDeadlock(box):
+                    self.deadlocks_pos.append(box)                
+                    self.deadlocks.append(next_state)
+                    valid_directions.remove(direction)
+
         return list(set(valid_directions))
     
 
@@ -177,10 +187,11 @@ class SokobanSolver:
             # para cada ação na lista de ações possíveis
             for action in self.actions(node.state):
                 new_state = self.result(node.state,action)
-                
-                if node.in_parent(new_state):
+                #print("DeadLock:::: ", self.deadlocks)
+                if new_state not in self.deadlocks:
+                    #print("State no in DEADLOCK", new_state, "\nDEADLOCKS", self.deadlocks)
+                    if node.in_parent(new_state):
                         continue
-                if (new_state not in self.deadlocks):
                         #new_node = SearchNode(state=new_state,parent=node,cost=node.cost+self.cost(node.state,action),
                         #   heuristic=self.heuristic(new_state, self.method),action=action)
                         
@@ -211,13 +222,15 @@ class SokobanSolver:
     def isDeadlock(self, pos):
         i_x = 0 #number of horizontal wall next to the pos i
         i_y = 0 #number of vertical wall next to the pos i
-        
-        if Map.is_blocked(self.level_map,pos):
+        other_boxes = [box for box in self.boxes_position if box != pos]
+        if self.level_map.is_blocked(pos):
             return True
-        if Map.is_blocked(self.level_map,(pos[0] + 1, pos[1])) or Map.is_blocked(self.level_map,(pos[0] - 1, pos[1])):
+        if self.level_map.is_blocked((pos[0] + 1, pos[1])) or self.level_map.is_blocked((pos[0] - 1, pos[1])) or (pos[0] + 1, pos[1]) in other_boxes or (pos[0] - 1, pos[1]) in other_boxes:
             i_x += 1
-        if Map.is_blocked(self.level_map,(pos[0], pos[1] + 1)) or Map.is_blocked(self.level_map,(pos[0], pos[1] - 1)):
+        if self.level_map.is_blocked((pos[0], pos[1] + 1)) or self.level_map.is_blocked((pos[0], pos[1] - 1)) or (pos[0], pos[1] + 1) in other_boxes or (pos[0], pos[1] - 1) in other_boxes:
             i_y += 1
-        #if i_x > 0 and i_y > 0 and str(pos) not in str(Map.empty_goals): # verifies if is not on a corner and if it is, make sure it's not a goal
-        #    return True
+
+        if (i_x > 0 and i_y > 0) and pos in self.goals_position: # verifies if is not on a corner and if it is, make sure it's not a goal
+           return True
+
         return False
