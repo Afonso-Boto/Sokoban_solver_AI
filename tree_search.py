@@ -184,14 +184,11 @@ class SokobanSolver:
                         #new_node = SearchNode(state=new_state,parent=node,cost=node.cost+self.cost(node.state,action),
                         #   heuristic=self.heuristic(new_state, self.method),action=action)
                         
-                        # para funcionar com a*
-                        # TODO: ver isto
+                    # para funcionar com a*
+                    # TODO: ver isto
                     new_node = SearchNode(state=new_state,parent=node,cost=self.cost(node.state,action),
                             heuristic=self.heuristic(new_state, self.method),action=action)
-                        #print(node.cost, new_node.cost, new_node.cost+new_node.heuristic)
-                # se o novo nó não estiver na lista de nós já percorridos 
-                # adicionar aos novos estados
-                #if not node.in_parent(new_state):
+                                
                     lnewnodes.append(new_node)
             self.add_to_open(lnewnodes)
         return None
