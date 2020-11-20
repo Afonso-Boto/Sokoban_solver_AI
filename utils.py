@@ -1,4 +1,5 @@
 #from mapa import Map
+import math
 
 def calc_next_state(current_state, direction):
     curr_x, curr_y = current_state['keeper']
@@ -30,6 +31,22 @@ def calc_next_state(current_state, direction):
     
     next_state = {'keeper': next_positon, 'boxes': boxes, 'goals':current_state['goals']}  
     return next_state
+    
+        
+def calc_distance(position, list_of_positions, method):
+    min_distance = float('inf')
+    
+    for pos in list_of_positions:
+        if method == 'euclidean':
+            dist = math.sqrt((pos[0] - position[0]) ** 2 + (pos[1] - position[1]) ** 2)
+        elif method == 'manhatan':
+            dist = abs(position[0] - pos[0]) + abs(position[1] - pos[1])
+
+        if dist < min_distance:
+           min_distance = dist 
+    
+    return min_distance
+    
 
 '''
 def isDeadlock(self, pos):
