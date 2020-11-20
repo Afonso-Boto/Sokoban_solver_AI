@@ -43,6 +43,7 @@ class SokobanSolver:
         self.deadlocks = []
         self.strategy = strategy
         self.method = method
+        self.deadlocks_pos = []
     
     
     # obtain the path from the initial state to the goal state
@@ -96,11 +97,19 @@ class SokobanSolver:
             a = list(set(boxes))
             if len(a) < len (boxes):
                 valid_directions.remove(direction)
+            
             for box in boxes:
-                if self.isDeadlock(box):
-                    print('DEADLOCK', box)
-                    self.deadlocks.extend(next_state)
+                if box in self.deadlocks_pos:
+                
                     valid_directions.remove(direction)
+
+                elif self.isDeadlock(box):
+                    self.deadlocks_pos.append(box)
+                    #print('DEADLOCK', next_state['boxes'], box)
+                    #print("BOXESSS!!!!!!",next_state)
+                    self.deadlocks.append(next_state)
+                    valid_directions.remove(direction)
+
         return list(set(valid_directions))
     
 
@@ -178,8 +187,9 @@ class SokobanSolver:
             # para cada ação na lista de ações possíveis
             for action in self.actions(node.state):
                 new_state = self.result(node.state,action)
-                
-                if (new_state not in self.deadlocks):
+                print("DeadLock:::: ", self.deadlocks)
+                if new_state not in self.deadlocks:
+                    #print("State no in DEADLOCK", new_state, "\nDEADLOCKS", self.deadlocks)
                     if node.in_parent(new_state):
                         continue
                     else:
@@ -217,7 +227,7 @@ class SokobanSolver:
         i_x = 0 #number of horizontal wall next to the pos i
         i_y = 0 #number of vertical wall next to the pos i
         other_boxes = [box for box in self.boxes_position if box != pos]
-        if Map.is_blocked(self.level_map,pos):
+        if self.level_map.is_blocked(pos):
             return True
         if self.level_map.is_blocked((pos[0] + 1, pos[1])) or self.level_map.is_blocked((pos[0] - 1, pos[1])) or (pos[0] + 1, pos[1]) in other_boxes or (pos[0] - 1, pos[1]) in other_boxes:
             i_x += 1
