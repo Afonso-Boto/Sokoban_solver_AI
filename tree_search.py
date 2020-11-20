@@ -3,9 +3,9 @@ from utils import *
 import asyncio
 
 GOAL_COST = 0
-FLOOR_COST = 1
-KEEPER_MOVE_COST = 2
-DEADLOCK_COST = 3
+FLOOR_COST = 0.2
+KEEPER_MOVE_COST = 0.40
+#DEADLOCK_COST = 50
 
 
 DIRECTIONS = ["w","a","s","d"]
@@ -104,10 +104,12 @@ class SokobanSolver:
         keeper = current_state['keeper']
         boxes = current_state['boxes']
         goals = current_state['goals']
-        heuristic = calc_distance(keeper,boxes,method)
+        heuristic = calc_distance(keeper,boxes,'manhatan')
+        heuristic2 = calc_distance(keeper,boxes,'euclidean')
         for box in boxes:
-            heuristic += calc_distance(box,goals, method)
-        return heuristic
+            heuristic += calc_distance(box,goals, 'manhatan')
+            heuristic2 = calc_distance(box,goals,'euclidean')
+        return max(heuristic,heuristic2)
         
         
     def cost(self, current_state, direction):
@@ -131,8 +133,10 @@ class SokobanSolver:
             if box in self.goals_position:
                 return GOAL_COST
                 # check if the next position is a deadlock
-            elif box in self.deadlocks:
-                return DEADLOCK_COST
+            
+            #isto acho que nao faz nada, nunca vemos o custo de um estado se ele for um deadlock
+            #elif box in self.deadlocks:
+            #    return DEADLOCK_COST
         
         # if we moved a box into a normal floor tile    
         if str(boxes) != str(prev_boxes):
@@ -167,7 +171,6 @@ class SokobanSolver:
             node = self.open_nodes.pop(0)
 
             if self.satisfies(node.state):
-                self.solution = node
                 return self.get_path(node)
 
             lnewnodes = []
@@ -175,18 +178,17 @@ class SokobanSolver:
             for action in self.actions(node.state):
                 new_state = self.result(node.state,action)
                 
-                if (new_state not in self.deadlocks):
-                    if node.in_parent(new_state):
+                if node.in_parent(new_state):
                         continue
-                    else:
+                if (new_state not in self.deadlocks):
                         #new_node = SearchNode(state=new_state,parent=node,cost=node.cost+self.cost(node.state,action),
                         #   heuristic=self.heuristic(new_state, self.method),action=action)
                         
                         # para funcionar com a*
                         # TODO: ver isto
-                        new_node = SearchNode(state=new_state,parent=node,cost=self.cost(node.state,action),
+                    new_node = SearchNode(state=new_state,parent=node,cost=self.cost(node.state,action),
                             heuristic=self.heuristic(new_state, self.method),action=action)
-                        
+                        #print(node.cost, new_node.cost, new_node.cost+new_node.heuristic)
                 # se o novo nó não estiver na lista de nós já percorridos 
                 # adicionar aos novos estados
                 #if not node.in_parent(new_state):
