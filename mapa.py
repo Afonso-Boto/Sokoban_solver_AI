@@ -144,7 +144,7 @@ class Map:
 
 
 if __name__ == "__main__":
-    mapa = Map("levels/0.xsb")
+    mapa = Map("levels/2.xsb")
     print(mapa)
     assert mapa.keeper == (11, 8)
     assert mapa.get_tile((4, 2)) == Tiles.WALL
