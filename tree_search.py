@@ -115,7 +115,7 @@ class SokobanSolver:
         heuristic = calc_distance(keeper,boxes,method)
         for box in boxes:
             heuristic += calc_distance(box,goals,method)
-        return heuristic*3
+        return heuristic*cost
         
         
     def cost(self, current_state, direction):
@@ -172,7 +172,7 @@ class SokobanSolver:
         root = SearchNode(state,None,cost=0,heuristic=self.heuristic(current_state=state,method=self.method))
         self.open_nodes = [root]
         open_nodes = 0
-        print("HEURISTIC: ", self.heuristic(state,self.method))
+        #print("HEURISTIC: ", self.heuristic(state,self.method))
         
         while self.open_nodes != []:
             await asyncio.sleep(0)
@@ -190,17 +190,17 @@ class SokobanSolver:
                 if new_state not in self.deadlocks:
                     if node.in_parent(new_state):
                         continue
-                    acc_cost = node.cost + self.cost(node.state,action)
-                    heur = self.heuristic(new_state, self.cost(node.state,action), self.method)
-                    acc_cost = acc_cost*.5
-                    heur = heur * .5
-                    new_node = SearchNode(state=new_state,parent=node,cost=acc_cost,
-                                heuristic=heur,action=action)
+                    #acc_cost = node.cost + self.cost(node.state,action)
+                    #heur = self.heuristic(new_state, self.cost(node.state,action), self.method)
+                    #acc_cost = acc_cost * .5
+                    #heur = heur * .5
+                    new_node = SearchNode(state=new_state,parent=node,cost=(node.cost + self.cost(node.state,action))*.5,
+                                heuristic=self.heuristic(new_state, self.cost(node.state,action), self.method)*.5,action=action)
                     open_nodes += 1   
                     
-                    print("ACC COST: ", new_node.cost)
-                    print("HEURISTIC: ", new_node.heuristic)
-                    print("OPEN NODES UNTIL NOW: ", open_nodes)   
+                    #print("ACC COST: ", new_node.cost)
+                    #print("HEURISTIC: ", new_node.heuristic)
+                    #print("OPEN NODES UNTIL NOW: ", open_nodes)   
                     lnewnodes.append(new_node)
             self.add_to_open(lnewnodes)
         return None
