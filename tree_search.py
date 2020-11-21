@@ -115,7 +115,7 @@ class SokobanSolver:
         heuristic = calc_distance(keeper,boxes,method)
         for box in boxes:
             heuristic += calc_distance(box,goals,method)
-        return heuristic
+        return heuristic*3
         
         
     def cost(self, current_state, direction):
