@@ -108,7 +108,7 @@ class SokobanSolver:
         return list(set(valid_directions))
     
 
-    def heuristic(self, current_state,method):
+    def heuristic(self, current_state,cost=3,method='manhatan'):
         keeper = current_state['keeper']
         boxes = current_state['boxes']
         goals = current_state['goals']
@@ -169,7 +169,7 @@ class SokobanSolver:
     async def search(self, state):
         #permite inicializar uma nova arvore de cada vez que é chamada a funcao search
         #faz reset basicamente
-        root = SearchNode(state,None,cost=0,heuristic=self.heuristic(state,self.method))
+        root = SearchNode(state,None,cost=0,heuristic=self.heuristic(current_state=state,method=self.method))
         self.open_nodes = [root]
         open_nodes = 0
         print("HEURISTIC: ", self.heuristic(state,self.method))
@@ -186,25 +186,20 @@ class SokobanSolver:
             # para cada ação na lista de ações possíveis
             for action in self.actions(node.state):
                 new_state = self.result(node.state,action)
-                #print("DeadLock:::: ", self.deadlocks)
+                
                 if new_state not in self.deadlocks:
-                    #print("State no in DEADLOCK", new_state, "\nDEADLOCKS", self.deadlocks)
                     if node.in_parent(new_state):
                         continue
-                        #new_node = SearchNode(state=new_state,parent=node,cost=node.cost+self.cost(node.state,action),
-                        #   heuristic=self.heuristic(new_state, self.method),action=action)
-                    
-                    cost = self.cost(node.state,action)
-                
-                    print("COST: ", cost)
-                    acc_cost = node.cost + cost
-                    print("ACC COST: ", acc_cost)
-                    print("HEURISTIC: ", self.heuristic(new_state,self.method))
-                        # para funcionar com a*
-                        # TODO: ver isto
-                    new_node = SearchNode(state=new_state,parent=node,cost=cost,
-                                heuristic=self.heuristic(new_state, self.method),action=action)
+                    acc_cost = node.cost + self.cost(node.state,action)
+                    heur = self.heuristic(new_state, self.cost(node.state,action), self.method)
+                    acc_cost = acc_cost*.5
+                    heur = heur * .5
+                    new_node = SearchNode(state=new_state,parent=node,cost=acc_cost,
+                                heuristic=heur,action=action)
                     open_nodes += 1   
+                    
+                    print("ACC COST: ", new_node.cost)
+                    print("HEURISTIC: ", new_node.heuristic)
                     print("OPEN NODES UNTIL NOW: ", open_nodes)   
                     lnewnodes.append(new_node)
             self.add_to_open(lnewnodes)
