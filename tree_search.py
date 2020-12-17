@@ -103,10 +103,11 @@ class SokobanSolver:
             for box in boxes:
                 ''' Estas verificações não poupam grande coisa em termo de nós abertos '''
                 if box in self.deadlocks_pos:
-                    valid_directions.remove(direction)     
+                    valid_directions.remove(direction)   
                     self.deadlocks.append(next_state)
-                    continue
-                elif self.isDeadlock(box):
+                    continue                 
+                elif self.isDeadlock(box, current_state['goals']):
+                    print("DEADLOCK FOUND:",box)
                     self.deadlocks_pos.append(box)                
                     self.deadlocks.append(next_state)
                     valid_directions.remove(direction)
@@ -156,7 +157,6 @@ class SokobanSolver:
         
         #if its neither a goal, a deadlock nor moved a box return the cost of a keeper move
         return KEEPER_MOVE_COST
-
     def satisfies(self, current_state):
         ''' 
         RECEIVES: current state
@@ -234,9 +234,10 @@ class SokobanSolver:
             self.open_nodes.sort(key=lambda node: (node.cost + node.heuristic))
 
     # auxiliary method for calculating deadlocks
-    def isDeadlock(self, pos):
+    def isDeadlock(self, pos, goals_position=[]):
         i_x = 0 #number of horizontal wall next to the pos i
         i_y = 0 #number of vertical wall next to the pos i
+        aux = []
         other_boxes = [box for box in self.boxes_position if box != pos]
         if self.level_map.is_blocked(pos):
             return True
@@ -248,4 +249,15 @@ class SokobanSolver:
         if (i_x > 0 and i_y > 0) and pos in self.goals_position: # verifies if is not on a corner and if it is, make sure it's not a goal
            return True
 
-        return False
+        for gp in goals_position:
+            if(pos[0] > gp[0] and self.level_map.is_blocked((pos[0] + 1, pos[1]))) or (pos[0] < gp[0] and self.level_map.is_blocked((pos[0] - 1, pos[1]))):
+                aux.append(True)
+            else:
+                aux.append(False)
+
+            if(pos[1] > gp[1] and self.level_map.is_blocked((pos[0], pos[1] + 1))) or (pos[1] < gp[1] and self.level_map.is_blocked((pos[0] , pos[1] - 1))):
+                aux.append(True)
+            else:
+                aux.append(False)
+        
+        return all(aux)
