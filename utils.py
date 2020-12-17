@@ -44,7 +44,7 @@ def calc_distance(position, list_of_positions, method):
         elif method == 'mixed':
             dist1 = math.sqrt((pos[0] - position[0]) ** 2 + (pos[1] - position[1]) ** 2)
             dist2 = abs(position[0] - pos[0]) + abs(position[1] - pos[1])
-            dist = max(dist1,dist2)
+            dist = min(dist1,dist2)
         if dist < min_distance:
            min_distance = dist     
     return min_distance

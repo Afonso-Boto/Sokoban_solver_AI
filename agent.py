@@ -12,18 +12,11 @@ class SokobanAgent:
         self.boxes = level.boxes
         self.goals = level.filter_tiles([Tiles.GOAL, Tiles.BOX_ON_GOAL])
         self.keeper = level.keeper
+        print(level.keeper)
         self.initial_state = {'boxes': self.boxes, 'keeper': self.keeper, 'goals':self.goals}
         #self.goal_state = {'boxes': self.goals,'goals':self.goals}
         self.prev_state = {}
-        self.path_finder : SokobanSolver = SokobanSolver(level_map = level, strategy='a*',method='mixed')
-        
-    @property
-    def state(self):
-        return self.initial_state
-    
-    @property
-    def step(self):
-        return self.step_counter
+        self.path_finder : SokobanSolver = SokobanSolver(level_map = level, method='euclidean')
         
     def search(self):
         '''

@@ -40,15 +40,14 @@ class SearchNode:
 # Arvores de pesquisa
 class SokobanSolver:
     # construtor
-    def __init__(self,level_map: Map, strategy='breadth', method='manhatan'): 
+    def __init__(self,level_map: Map, method='manhatan'): 
         self.level_map = level_map
         self.boxes_position = []
         self.goals_position = []
         self.deadlocks = []
-        self.strategy = strategy
         self.method = method
         self.deadlocks_pos = [(p_x, p_y) for p_x in range(level_map.hor_tiles) for p_y in range(level_map.hor_tiles) if self.isDeadlock((p_x, p_y))]
-    
+        print(self.deadlocks_pos)
     
     # obtain the path from the initial state to the goal state
     def get_path(self,node):
@@ -103,6 +102,14 @@ class SokobanSolver:
             for box in boxes:
                 ''' Estas verificações não poupam grande coisa em termo de nós abertos '''
                 if box in self.deadlocks_pos:
+                    valid_directions.remove(direction)
+                    continue          
+                elif self.isDeadlock(box):
+                    self.deadlocks_pos.append(box)                
+                    #self.deadlocks.append(next_state)
+                    valid_directions.remove(direction)
+                    
+                '''if box in self.deadlocks_pos:
                     valid_directions.remove(direction)   
                     self.deadlocks.append(next_state)
                     continue                 
@@ -110,7 +117,7 @@ class SokobanSolver:
                     print("DEADLOCK FOUND:",box)
                     self.deadlocks_pos.append(box)                
                     self.deadlocks.append(next_state)
-                    valid_directions.remove(direction)
+                    valid_directions.remove(direction)'''
 
         return list(set(valid_directions))
     
@@ -203,35 +210,13 @@ class SokobanSolver:
                     
                     new_node = SearchNode(state=new_state,parent=node,cost=acc_cost,
                                 heuristic=heur,action=action)
-                    #cost = self.cost(node.state,action)
-                    #acc_cost = (node.cost + cost)
-                    #heur = self.heuristic(new_state,cost,self.method)
-                    #heur *= (1.0 + 1/100)
-                    #new_node = SearchNode(state=new_state,parent=node,cost=acc_cost,
-                                #heuristic=heur,action=action)
                     open_nodes += 1   
                     
                     #print("ACC COST: ", new_node.cost)
                     #print("HEURISTIC: ", new_node.heuristic)
                     #print("OPEN NODES UNTIL NOW: ", open_nodes)   
-                    #lnewnodes.append(new_node)
                     self.open_nodes.put((acc_cost+heur, new_node))
-            #self.add_to_open(lnewnodes)
         return None
-
-    # juntar novos nos a lista de nos abertos de acordo com a estrategia
-    def add_to_open(self,lnewnodes):
-        if self.strategy == 'breadth':
-            self.open_nodes.extend(lnewnodes)
-        elif self.strategy == 'uniform':
-            self.open_nodes.extend(lnewnodes)
-            self.open_nodes.sort(key=lambda node: node.cost)
-        elif self.strategy == 'greedy':
-            self.open_nodes.extend(lnewnodes)
-            self.open_nodes.sort(key=lambda node: node.heuristic)
-        elif self.strategy == 'a*':
-            self.open_nodes.extend(lnewnodes)
-            self.open_nodes.sort(key=lambda node: (node.cost + node.heuristic))
 
     # auxiliary method for calculating deadlocks
     def isDeadlock(self, pos, goals_position=[]):
@@ -249,7 +234,7 @@ class SokobanSolver:
         if (i_x > 0 and i_y > 0) and pos in self.goals_position: # verifies if is not on a corner and if it is, make sure it's not a goal
            return True
 
-        for gp in goals_position:
+        '''for gp in goals_position:
             if(pos[0] > gp[0] and self.level_map.is_blocked((pos[0] + 1, pos[1]))) or (pos[0] < gp[0] and self.level_map.is_blocked((pos[0] - 1, pos[1]))):
                 aux.append(True)
             else:
@@ -260,4 +245,4 @@ class SokobanSolver:
             else:
                 aux.append(False)
         
-        return all(aux)
+        return all(aux)'''
