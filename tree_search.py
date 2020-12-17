@@ -1,12 +1,12 @@
 from mapa import Map
 from utils import *
 import asyncio
+from queue import PriorityQueue
 
 GOAL_COST = 1
 FLOOR_COST = 2
 KEEPER_MOVE_COST = 3
 #DEADLOCK_COST = 50
-
 
 DIRECTIONS = ["w","a","s","d"]
 
@@ -28,6 +28,10 @@ class SearchNode:
         # verifica se o novo estado esta no caminho já percorrido (avo, bisavo, etc)
         return self.parent.in_parent(newstate)
 
+    def __lt__(self, other):
+        return self.cost + self.heuristic < other.cost + other.heuristic
+    def __le__(self, other):
+        return self.cost + self.heuristic <= other.cost + other.heuristic
     def __str__(self):
         return "no(" + str(self.state) + "," + str(self.parent) + ")"
     def __repr__(self):
@@ -43,7 +47,7 @@ class SokobanSolver:
         self.deadlocks = []
         self.strategy = strategy
         self.method = method
-        self.deadlocks_pos = []
+        self.deadlocks_pos = [(p_x, p_y) for p_x in range(level_map.hor_tiles) for p_y in range(level_map.hor_tiles) if self.isDeadlock((p_x, p_y))]
     
     
     # obtain the path from the initial state to the goal state
@@ -90,21 +94,23 @@ class SokobanSolver:
             boxes = next_state['boxes'][:]
             
             valid_directions.append(direction)
-            if Map.is_blocked(self.level_map,keeper):
+            # Check wether we are placing a box outside of the map or
+            # placing a box on top of another box  
+            if Map.is_blocked(self.level_map,keeper) or len(list(set(boxes))) < len (boxes):
                 valid_directions.remove(direction)
-            
-            # Check wether we are placing a box on top of another            
-            if len(list(set(boxes))) < len (boxes):
-                valid_directions.remove(direction)
+                continue
             
             for box in boxes:
                 ''' Estas verificações não poupam grande coisa em termo de nós abertos '''
                 if box in self.deadlocks_pos:
-                    valid_directions.remove(direction)                    
+                    valid_directions.remove(direction)     
+                    self.deadlocks.append(next_state)
+                    continue
                 elif self.isDeadlock(box):
                     self.deadlocks_pos.append(box)                
                     self.deadlocks.append(next_state)
                     valid_directions.remove(direction)
+
         return list(set(valid_directions))
     
 
@@ -169,20 +175,21 @@ class SokobanSolver:
     async def search(self, state):
         #permite inicializar uma nova arvore de cada vez que é chamada a funcao search
         #faz reset basicamente
+        self.open_nodes = PriorityQueue()
         root = SearchNode(state,None,cost=0,heuristic=self.heuristic(current_state=state,method=self.method))
-        self.open_nodes = [root]
+        self.open_nodes.put((0,root))
         open_nodes = 0
         #print("HEURISTIC: ", self.heuristic(state,self.method))
         
         while self.open_nodes != []:
             await asyncio.sleep(0)
-            node = self.open_nodes.pop(0)
+            node = self.open_nodes.get()[1]
 
             if self.satisfies(node.state):
                 print("OPEN NODES ", open_nodes)
                 return self.get_path(node)
 
-            lnewnodes = []
+            #lnewnodes = []
             # para cada ação na lista de ações possíveis
             for action in self.actions(node.state):
                 new_state = self.result(node.state,action)
@@ -190,19 +197,26 @@ class SokobanSolver:
                 if new_state not in self.deadlocks:
                     if node.in_parent(new_state):
                         continue
-                    #acc_cost = node.cost + self.cost(node.state,action)
-                    #heur = self.heuristic(new_state, self.cost(node.state,action), self.method)
-                    #acc_cost = acc_cost * .5
-                    #heur = heur * .5
-                    new_node = SearchNode(state=new_state,parent=node,cost=(node.cost + self.cost(node.state,action))*.5,
-                                heuristic=self.heuristic(new_state, self.cost(node.state,action), self.method)*.5,action=action)
+                    
+                    acc_cost = (node.cost + self.cost(node.state,action))*.5
+                    heur = self.heuristic(new_state, self.cost(node.state,action), self.method)*.5
+                    
+                    new_node = SearchNode(state=new_state,parent=node,cost=acc_cost,
+                                heuristic=heur,action=action)
+                    #cost = self.cost(node.state,action)
+                    #acc_cost = (node.cost + cost)
+                    #heur = self.heuristic(new_state,cost,self.method)
+                    #heur *= (1.0 + 1/100)
+                    #new_node = SearchNode(state=new_state,parent=node,cost=acc_cost,
+                                #heuristic=heur,action=action)
                     open_nodes += 1   
                     
                     #print("ACC COST: ", new_node.cost)
                     #print("HEURISTIC: ", new_node.heuristic)
                     #print("OPEN NODES UNTIL NOW: ", open_nodes)   
-                    lnewnodes.append(new_node)
-            self.add_to_open(lnewnodes)
+                    #lnewnodes.append(new_node)
+                    self.open_nodes.put((acc_cost+heur, new_node))
+            #self.add_to_open(lnewnodes)
         return None
 
     # juntar novos nos a lista de nos abertos de acordo com a estrategia
