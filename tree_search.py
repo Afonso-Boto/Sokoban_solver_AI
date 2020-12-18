@@ -94,18 +94,16 @@ class SokobanSolver:
             if Map.is_blocked(self.level_map,keeper) or len(list(set(boxes))) < len (boxes):
                 valid_directions.remove(direction)
                 continue
-            
+
             for box in boxes:
                 if box in self.deadlocks_pos:
                     valid_directions.remove(direction)
-                    continue          
+                    continue
                 elif self.isDeadlock(box):
-                    self.deadlocks_pos.append(box)                
+                    self.deadlocks_pos.append(box)  
                     self.deadlocks.append(next_state)
                     valid_directions.remove(direction)
-                # ver se ponho boxes umas ao lado das outras
-                # ver se encosto a uma parede
-                                  
+                                            
         return list(set(valid_directions))
     
 
@@ -138,7 +136,7 @@ class SokobanSolver:
         for box in boxes:
             if box in self.goals_position:
                 return GOAL_COST
-            
+        
         # if we moved a box into a normal floor tile    
         boxes.sort()
         prev_boxes.sort()
@@ -180,7 +178,7 @@ class SokobanSolver:
             if self.satisfies(node.state):
                 print("OPEN NODES ", open_nodes)
                 return self.get_path(node)
-
+            
             for action in self.actions(node.state):
                 new_state = self.result(node.state,action)
                 
@@ -202,20 +200,30 @@ class SokobanSolver:
     def isDeadlock(self, pos):
         i_x = 0
         i_y = 0
+        list_x = [x[0] for x in self.goals_position]
+        list_y = [y[1] for y in self.goals_position]
 
         if self.level_map.is_blocked(pos):
             return True
         
         if self.level_map.is_blocked((pos[0] + 1, pos[1])) or self.level_map.is_blocked((pos[0] - 1, pos[1])):
             i_x += 1
-        
         if self.level_map.is_blocked((pos[0], pos[1] + 1)) or self.level_map.is_blocked((pos[0], pos[1] - 1)):
             i_y += 1
         
         # verifies if is not on a corner and if it is, make sure it's not a goal
         if (i_x > 0 and i_y > 0) and (pos not in self.goals_position):
            return True
-
+        
+        if (i_x > 0 and (pos[0] not in list_x) and ((self.level_map.is_blocked((pos[0]+1, pos[1]+1))) and (self.level_map.is_blocked((pos[0]+1,pos[1]-1))))):
+            return True
+        elif (i_x > 0 and (pos[0] not in list_x) and ((self.level_map.is_blocked((pos[0]-1, pos[1]+1))) and (self.level_map.is_blocked((pos[0]-1,pos[1]-1))))):
+            return True
+        elif (i_y > 0 and (pos[1] not in list_y) and (self.level_map.is_blocked((pos[0]+1, pos[1]+1))) and (self.level_map.is_blocked((pos[0]-1, pos[1]+1)))):
+            return True
+        elif (i_y > 0 and (pos[1] not in list_y) and (self.level_map.is_blocked((pos[0]+1, pos[1]-1))) and (self.level_map.is_blocked((pos[0]-1, pos[1]-1)))):
+            return True
+        
         '''for gp in self.goals_position:
             if(pos[0] > gp[0] and self.level_map.is_blocked((pos[0] + 1, pos[1]))) or (pos[0] < gp[0] and self.level_map.is_blocked((pos[0] - 1, pos[1]))):
                 return True

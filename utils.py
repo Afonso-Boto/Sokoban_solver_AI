@@ -32,7 +32,7 @@ def calc_next_state(current_state, direction):
     return next_state
     
         
-def calc_distance(position, list_of_positions, method):
+def calc_distance(position, list_of_positions, method='manhatan'):
     min_distance = float('inf')
     
     for pos in list_of_positions:
