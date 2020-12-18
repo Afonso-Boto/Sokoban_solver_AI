@@ -46,8 +46,8 @@ class SokobanSolver:
         self.goals_position = []
         self.deadlocks = []
         self.method = method
-        self.deadlocks_pos = [(p_x, p_y) for p_x in range(level_map.hor_tiles) for p_y in range(level_map.hor_tiles) if self.isDeadlock((p_x, p_y))]
-        print(self.deadlocks_pos)
+        self.deadlocks_pos = []
+        #self.deadlocks_pos = [(p_x, p_y) for p_x in range(level_map.hor_tiles) for p_y in range(level_map.hor_tiles) if self.isDeadlock((p_x, p_y))]
     
     # obtain the path from the initial state to the goal state
     def get_path(self,node):
@@ -106,7 +106,7 @@ class SokobanSolver:
                     continue          
                 elif self.isDeadlock(box):
                     self.deadlocks_pos.append(box)                
-                    #self.deadlocks.append(next_state)
+                    self.deadlocks.append(next_state)
                     valid_directions.remove(direction)
                     
                 '''if box in self.deadlocks_pos:
@@ -183,6 +183,7 @@ class SokobanSolver:
         #permite inicializar uma nova arvore de cada vez que é chamada a funcao search
         #faz reset basicamente
         self.open_nodes = PriorityQueue()
+        self.goals_position = state['goals'][:]
         root = SearchNode(state,None,cost=0,heuristic=self.heuristic(current_state=state,method=self.method))
         self.open_nodes.put((0,root))
         open_nodes = 0
@@ -231,7 +232,7 @@ class SokobanSolver:
         if self.level_map.is_blocked((pos[0], pos[1] + 1)) or self.level_map.is_blocked((pos[0], pos[1] - 1)) or (pos[0], pos[1] + 1) in other_boxes or (pos[0], pos[1] - 1) in other_boxes:
             i_y += 1
 
-        if (i_x > 0 and i_y > 0) and pos in self.goals_position: # verifies if is not on a corner and if it is, make sure it's not a goal
+        if (i_x > 0 and i_y > 0) and (pos not in self.goals_position): # verifies if is not on a corner and if it is, make sure it's not a goal
            return True
 
         '''for gp in goals_position:
