@@ -87,7 +87,7 @@ class SokobanSolver:
         for direction in DIRECTIONS:
             next_state = calc_next_state(current_state,direction)
             keeper = next_state['keeper']
-            boxes = next_state['boxes'][:]
+            boxes = next_state['boxes']
             
             valid_directions.append(direction)
             # Check wether we are placing a box outside of the map or
@@ -105,7 +105,8 @@ class SokobanSolver:
                     self.deadlocks_pos.append(box)                
                     self.deadlocks.append(next_state)
                     valid_directions.remove(direction)
-                    
+                # ver se ponho boxes umas ao lado das outras
+                # ver se encosto a uma parede                    
         return list(set(valid_directions))
     
 
@@ -129,15 +130,16 @@ class SokobanSolver:
             -> Calculates the next state (positions of the keeper and boxes)
             -> Returns the cost of achieving the new state
         '''
-        prev_boxes = current_state['boxes'][:]
+        prev_boxes = current_state['boxes']
         next_state = calc_next_state(current_state, direction)
         
-        boxes = next_state['boxes'][:]
+        boxes = next_state['boxes']
         for box in boxes:
             if box in self.goals_position:
                 return GOAL_COST
-            if next_state['keeper'] in near_box(box):
-                return MOVE_TO_BOX
+            # com isto comentado expande mais nos mas encontra caminhos mais curtos
+            #if next_state['keeper'] in near_box(box):
+            #    return MOVE_TO_BOX
             
         # if we moved a box into a normal floor tile    
         boxes.sort()
@@ -155,21 +157,22 @@ class SokobanSolver:
         
         Verifies if all the boxes are placed on the goals:
             -> Receives a dictionary containing the current state
-            -> Sorts the lists containing the positions of the boxes and goals
-            -> Checks wether the lists are equal
+            -> Sorts the list containing the positions of the boxes
+            -> Checks wether the list is equal to the list containing the goals' position
         '''
         current_state['boxes'].sort()
-        current_state['goals'].sort()
-        return current_state['boxes'] == current_state['goals']
+        return current_state['boxes'] == self.goals_position
 
-    # procurar a solucao
+
     async def search(self, state):
-        #permite inicializar uma nova arvore de cada vez que é chamada a funcao search
-        #faz reset basicamente
+        
+        self.goals_position = state['goals']
+        self.goals_position.sort()
+        
         self.open_nodes = PriorityQueue()
-        self.goals_position = state['goals'][:]
         root = SearchNode(state,None,cost=0,heuristic=self.heuristic(current_state=state,method=self.method))
         self.open_nodes.put((0,root))
+        
         open_nodes = 0
         
         while self.open_nodes != []:
@@ -192,28 +195,28 @@ class SokobanSolver:
                     
                     new_node = SearchNode(state=new_state,parent=node,cost=acc_cost,
                                 heuristic=heur,action=action)
-                    open_nodes += 1   
-                    
-                    #print("ACC COST: ", new_node.cost)
-                    #print("HEURISTIC: ", new_node.heuristic)
-                    #print("OPEN NODES UNTIL NOW: ", open_nodes)   
+                    open_nodes += 1 
                     self.open_nodes.put((acc_cost+heur, new_node))
+        
         return None
 
     # auxiliary method for calculating deadlocks
     def isDeadlock(self, pos):
         i_x = 0 #number of horizontal wall next to the pos i
         i_y = 0 #number of vertical wall next to the pos i
-        aux = []
-        other_boxes = [box for box in self.boxes_position if box != pos]
+        #aux = []
+
         if self.level_map.is_blocked(pos):
             return True
-        if self.level_map.is_blocked((pos[0] + 1, pos[1])) or self.level_map.is_blocked((pos[0] - 1, pos[1])) or (pos[0] + 1, pos[1]) in other_boxes or (pos[0] - 1, pos[1]) in other_boxes:
+        
+        if self.level_map.is_blocked((pos[0] + 1, pos[1])) or self.level_map.is_blocked((pos[0] - 1, pos[1])):
             i_x += 1
-        if self.level_map.is_blocked((pos[0], pos[1] + 1)) or self.level_map.is_blocked((pos[0], pos[1] - 1)) or (pos[0], pos[1] + 1) in other_boxes or (pos[0], pos[1] - 1) in other_boxes:
+        
+        if self.level_map.is_blocked((pos[0], pos[1] + 1)) or self.level_map.is_blocked((pos[0], pos[1] - 1)):
             i_y += 1
-
-        if (i_x > 0 and i_y > 0) and (pos not in self.goals_position): # verifies if is not on a corner and if it is, make sure it's not a goal
+        
+        # verifies if is not on a corner and if it is, make sure it's not a goal
+        if (i_x > 0 and i_y > 0) and (pos not in self.goals_position):
            return True
 
         '''for gp in self.goals_position:
