@@ -98,11 +98,14 @@ class SokobanSolver:
             for box in boxes:
                 if box in self.deadlocks_pos:
                     valid_directions.remove(direction)
+                    if next_state not in self.deadlocks:
+                        self.deadlocks.append(next_state)
                     continue
                 elif self.isDeadlock(box):
                     self.deadlocks_pos.append(box)  
                     self.deadlocks.append(next_state)
                     valid_directions.remove(direction)
+                    print(box)
         return list(set(valid_directions))
     
 
@@ -200,7 +203,8 @@ class SokobanSolver:
         i_y = 0
         list_x = [x[0] for x in self.goals_position]
         list_y = [y[1] for y in self.goals_position]
-
+        deadlock_check = False
+        deadlock_found = []
         if self.level_map.is_blocked(pos):
             return True
         
@@ -213,13 +217,133 @@ class SokobanSolver:
         if (i_x > 0 and i_y > 0) and (pos not in self.goals_position):
            return True
         
-        if (i_x > 0 and (pos[0] not in list_x) and (self.level_map.is_blocked((pos[0]+1, pos[1]+1))) and ((self.level_map.is_blocked((pos[0]+1, pos[1]+2)))) and ((self.level_map.is_blocked((pos[0]+1, pos[1]-2)))) and (self.level_map.is_blocked((pos[0]+1,pos[1]-1)))):
-            return True
-        elif (i_x > 0 and (pos[0] not in list_x) and ((self.level_map.is_blocked((pos[0]-1, pos[1]+1))) and (self.level_map.is_blocked((pos[0]-1, pos[1]+2))) and (self.level_map.is_blocked((pos[0]-1, pos[1]-2))) and (self.level_map.is_blocked((pos[0]-1,pos[1]-1))))):
-            return True
-        elif (i_y > 0 and (pos[1] not in list_y) and (self.level_map.is_blocked((pos[0]+1, pos[1]+1))) and (self.level_map.is_blocked((pos[0]+2, pos[1]+1))) and (self.level_map.is_blocked((pos[0]-2, pos[1]+1))) and (self.level_map.is_blocked((pos[0]-1, pos[1]+1)))):
-            return True
-        elif (i_y > 0 and (pos[1] not in list_y) and (self.level_map.is_blocked((pos[0]+1, pos[1]-1))) and (self.level_map.is_blocked((pos[0]+2, pos[1]-1))) and (self.level_map.is_blocked((pos[0]-2, pos[1]-1))) and (self.level_map.is_blocked((pos[0]-1, pos[1]-1)))):
-            return True
+        #if (i_x > 0 and (pos[0] not in list_x) and (self.level_map.is_blocked((pos[0]+1, pos[1]+1))) and ((self.level_map.is_blocked((pos[0]+1, pos[1]+2)))) and ((self.level_map.is_blocked((pos[0]+1, pos[1]-2)))) and (self.level_map.is_blocked((pos[0]+1,pos[1]-1)))):
+        #    return True
+        #elif (i_x > 0 and (pos[0] not in list_x) and ((self.level_map.is_blocked((pos[0]-1, pos[1]+1))) and (self.level_map.is_blocked((pos[0]-1, pos[1]+2))) and (self.level_map.is_blocked((pos[0]-1, pos[1]-2))) and (self.level_map.is_blocked((pos[0]-1,pos[1]-1))))):
+        #    return True
+        #elif (i_y > 0 and (pos[1] not in list_y) and (self.level_map.is_blocked((pos[0]+1, pos[1]+1))) and (self.level_map.is_blocked((pos[0]+2, pos[1]+1))) and (self.level_map.is_blocked((pos[0]-2, pos[1]+1))) and (self.level_map.is_blocked((pos[0]-1, pos[1]+1)))):
+        #    return True
+        #elif (i_y > 0 and (pos[1] not in list_y) and (self.level_map.is_blocked((pos[0]+1, pos[1]-1))) and (self.level_map.is_blocked((pos[0]+2, pos[1]-1))) and (self.level_map.is_blocked((pos[0]-2, pos[1]-1))) and (self.level_map.is_blocked((pos[0]-1, pos[1]-1)))):
+        #    return True
         
-        return False
+        
+
+        # verificação horizontal
+        if pos[0] not in list_x and self.level_map.is_blocked((pos[0] + 1, pos[1])) : #parede à direta
+
+                #descer
+                current_pos = pos
+                while True:
+                    deadlock_found.append(current_pos)
+                    if not self.level_map.is_blocked((current_pos[0] + 1, current_pos[1])):
+                        deadlock_check = False
+                        break
+                    elif self.level_map.is_blocked((current_pos[0], current_pos[1] + 1)):
+                        deadlock_check = True
+                        break
+                    
+                    current_pos = (current_pos[0], current_pos[1] + 1)
+                #apenas se for verdade subir
+                if deadlock_check:
+                    current_pos = pos
+                    while True:
+                        deadlock_found.append(current_pos)
+                        if not self.level_map.is_blocked((current_pos[0] + 1, current_pos[1])):
+                            deadlock_check = False
+                            break
+                        elif self.level_map.is_blocked((current_pos[0], current_pos[1] - 1)):
+                            deadlock_check = True
+                            break
+                        
+                        current_pos = (current_pos[0], current_pos[1] - 1)
+        if deadlock_check:
+            self.deadlocks_pos.extend(list(set(deadlock_found)))
+            return True
+
+        if pos[0] not in list_x and self.level_map.is_blocked((pos[0] - 1, pos[1])) : #parede à esquerda
+            current_pos = pos
+            while True:
+                deadlock_found.append(current_pos)
+                if not self.level_map.is_blocked((current_pos[0] - 1, current_pos[1])):
+                    deadlock_check = False
+                    break
+                elif self.level_map.is_blocked((current_pos[0], current_pos[1] + 1)):
+                    deadlock_check = True
+                    break
+                
+                
+                current_pos = (current_pos[0], current_pos[1] + 1)
+            #apenas se for verdade subir
+            if deadlock_check:
+                current_pos = pos
+                while True:
+                    deadlock_found.append(current_pos)
+                    if not self.level_map.is_blocked((current_pos[0] - 1, current_pos[1])):
+                        deadlock_check = False
+                        break
+                    elif self.level_map.is_blocked((current_pos[0], current_pos[1] - 1)):
+                        deadlock_check = True
+                        break
+                    
+                    current_pos = (current_pos[0], current_pos[1] - 1)
+
+        if deadlock_check:
+            self.deadlocks_pos.extend(list(set(deadlock_found)))
+            return True
+
+        # verificação vertical
+        if pos[1] not in list_y and self.level_map.is_blocked((pos[0], pos[1] - 1)): #parede em cima
+            current_pos = pos
+            while True: #ir para a direita
+                deadlock_found.append(current_pos)
+                if not self.level_map.is_blocked((current_pos[0], current_pos[1] - 1)):
+                    deadlock_check = False
+                    break
+                elif self.level_map.is_blocked((current_pos[0] + 1, current_pos[1])):
+                    deadlock_check = True
+                    break
+                
+                current_pos = (current_pos[0] + 1, current_pos[1])
+            #apenas se for verdade subir
+            if deadlock_check:
+                current_pos = pos
+                while True:
+                    deadlock_found.append(current_pos)
+                    if not self.level_map.is_blocked((current_pos[0] , current_pos[1] - 1)):
+                        deadlock_check = False
+                        break
+                    elif self.level_map.is_blocked((current_pos[0] - 1, current_pos[1])):
+                        deadlock_check = True
+                        break
+                    
+                    current_pos = (current_pos[0] - 1, current_pos[1])
+
+        if deadlock_check:
+            self.deadlocks_pos.extend(list(set(deadlock_found)))
+            return True
+
+        if pos[1] not in list_y and self.level_map.is_blocked((pos[0], pos[1] - 1)): #parede em baixo
+            current_pos = pos
+            while True: #ir para a direita
+                deadlock_found.append(current_pos)
+                if not self.level_map.is_blocked((current_pos[0], current_pos[1] + 1)):
+                    deadlock_check = False
+                    break
+                elif self.level_map.is_blocked((current_pos[0] + 1, current_pos[1])):
+                    deadlock_check = True
+                    break
+                current_pos = (current_pos[0] + 1, current_pos[1])
+            #apenas se for verdade subir
+            if deadlock_check:
+                current_pos = pos
+                while True:
+                    deadlock_found.append(current_pos)
+                    if not self.level_map.is_blocked((current_pos[0] , current_pos[1] + 1)):
+                        deadlock_check = False
+                        break
+                    elif self.level_map.is_blocked((current_pos[0] - 1, current_pos[1])):
+                        deadlock_check = True
+                        break
+                    current_pos = (current_pos[0] - 1, current_pos[1])
+        
+        return deadlock_check
