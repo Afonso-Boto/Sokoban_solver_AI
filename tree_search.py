@@ -3,9 +3,9 @@ from utils import *
 import asyncio
 from queue import PriorityQueue
 
-GOAL_COST = 0
-FLOOR_COST = 0.5
-KEEPER_MOVE_COST = 1
+GOAL_COST = 1
+FLOOR_COST = 1.5
+KEEPER_MOVE_COST = 2
 
 DIRECTIONS = ["w","a","s","d"]
 
@@ -116,7 +116,7 @@ class SokobanSolver:
         for box in boxes:
             heuristic += calc_distance(box,goals,method)
         
-        return heuristic*cost
+        return heuristic
         
         
     def cost(self, current_state, direction):
@@ -186,8 +186,8 @@ class SokobanSolver:
                     if node.in_parent(new_state):
                         continue
                     
-                    acc_cost = (node.cost + self.cost(node.state,action))*.5
-                    heur = self.heuristic(new_state, self.cost(node.state,action), self.method)*.5
+                    acc_cost = (node.cost + self.cost(node.state,action))
+                    heur = self.heuristic(new_state, self.cost(node.state,action), self.method)
                     
                     new_node = SearchNode(state=new_state,parent=node,cost=acc_cost,
                                 heuristic=heur,action=action)
