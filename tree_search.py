@@ -103,7 +103,6 @@ class SokobanSolver:
                     self.deadlocks_pos.append(box)  
                     self.deadlocks.append(next_state)
                     valid_directions.remove(direction)
-                                            
         return list(set(valid_directions))
     
 
@@ -115,8 +114,7 @@ class SokobanSolver:
         
         for box in boxes:
             heuristic += calc_distance(box,goals,method)
-        
-        return heuristic
+        return heuristic*cost
         
         
     def cost(self, current_state, direction):
@@ -215,19 +213,13 @@ class SokobanSolver:
         if (i_x > 0 and i_y > 0) and (pos not in self.goals_position):
            return True
         
-        if (i_x > 0 and (pos[0] not in list_x) and ((self.level_map.is_blocked((pos[0]+1, pos[1]+1))) and (self.level_map.is_blocked((pos[0]+1,pos[1]-1))))):
+        if (i_x > 0 and (pos[0] not in list_x) and (self.level_map.is_blocked((pos[0]+1, pos[1]+1))) and ((self.level_map.is_blocked((pos[0]+1, pos[1]+2)))) and ((self.level_map.is_blocked((pos[0]+1, pos[1]-2)))) and (self.level_map.is_blocked((pos[0]+1,pos[1]-1)))):
             return True
-        elif (i_x > 0 and (pos[0] not in list_x) and ((self.level_map.is_blocked((pos[0]-1, pos[1]+1))) and (self.level_map.is_blocked((pos[0]-1,pos[1]-1))))):
+        elif (i_x > 0 and (pos[0] not in list_x) and ((self.level_map.is_blocked((pos[0]-1, pos[1]+1))) and (self.level_map.is_blocked((pos[0]-1, pos[1]+2))) and (self.level_map.is_blocked((pos[0]-1, pos[1]-2))) and (self.level_map.is_blocked((pos[0]-1,pos[1]-1))))):
             return True
-        elif (i_y > 0 and (pos[1] not in list_y) and (self.level_map.is_blocked((pos[0]+1, pos[1]+1))) and (self.level_map.is_blocked((pos[0]-1, pos[1]+1)))):
+        elif (i_y > 0 and (pos[1] not in list_y) and (self.level_map.is_blocked((pos[0]+1, pos[1]+1))) and (self.level_map.is_blocked((pos[0]+2, pos[1]+1))) and (self.level_map.is_blocked((pos[0]-2, pos[1]+1))) and (self.level_map.is_blocked((pos[0]-1, pos[1]+1)))):
             return True
-        elif (i_y > 0 and (pos[1] not in list_y) and (self.level_map.is_blocked((pos[0]+1, pos[1]-1))) and (self.level_map.is_blocked((pos[0]-1, pos[1]-1)))):
+        elif (i_y > 0 and (pos[1] not in list_y) and (self.level_map.is_blocked((pos[0]+1, pos[1]-1))) and (self.level_map.is_blocked((pos[0]+2, pos[1]-1))) and (self.level_map.is_blocked((pos[0]-2, pos[1]-1))) and (self.level_map.is_blocked((pos[0]-1, pos[1]-1)))):
             return True
         
-        '''for gp in self.goals_position:
-            if(pos[0] > gp[0] and self.level_map.is_blocked((pos[0] + 1, pos[1]))) or (pos[0] < gp[0] and self.level_map.is_blocked((pos[0] - 1, pos[1]))):
-                return True
-            elif(pos[1] > gp[1] and self.level_map.is_blocked((pos[0], pos[1] + 1))) or (pos[1] < gp[1] and self.level_map.is_blocked((pos[0] , pos[1] - 1))):
-                return True'''
-            
         return False
