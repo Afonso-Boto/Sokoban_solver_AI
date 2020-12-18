@@ -3,10 +3,10 @@ from utils import *
 import asyncio
 from queue import PriorityQueue
 
-GOAL_COST = 1
-FLOOR_COST = 2
-KEEPER_MOVE_COST = 3
-#DEADLOCK_COST = 50
+GOAL_COST = 0
+FLOOR_COST = 0.5
+MOVE_TO_BOX = 0.5
+KEEPER_MOVE_COST = 1
 
 DIRECTIONS = ["w","a","s","d"]
 
@@ -54,12 +54,9 @@ class SokobanSolver:
         if node.parent == None:
             return [node.action]
         path = self.get_path(node.parent)
-        path += [node.action]
-        
+        path += [node.action]        
         return path
     
-    #def has_path(self, BoxPos):
-    #    return self.get_path(node) != []
 
     def result(self, current_state, direction):
         '''
@@ -109,16 +106,6 @@ class SokobanSolver:
                     self.deadlocks.append(next_state)
                     valid_directions.remove(direction)
                     
-                '''if box in self.deadlocks_pos:
-                    valid_directions.remove(direction)   
-                    self.deadlocks.append(next_state)
-                    continue                 
-                elif self.isDeadlock(box, current_state['goals']):
-                    print("DEADLOCK FOUND:",box)
-                    self.deadlocks_pos.append(box)                
-                    self.deadlocks.append(next_state)
-                    valid_directions.remove(direction)'''
-
         return list(set(valid_directions))
     
 
@@ -144,26 +131,23 @@ class SokobanSolver:
         '''
         prev_boxes = current_state['boxes'][:]
         next_state = calc_next_state(current_state, direction)
-            # check if the next position is a goal
         
         boxes = next_state['boxes'][:]
         for box in boxes:
             if box in self.goals_position:
                 return GOAL_COST
-                # check if the next position is a deadlock
+            if next_state['keeper'] in near_box(box):
+                return MOVE_TO_BOX
             
-            #isto acho que nao faz nada, nunca vemos o custo de um estado se ele for um deadlock
-            #elif box in self.deadlocks_pos:
-            #    return DEADLOCK_COST
-        
         # if we moved a box into a normal floor tile    
         boxes.sort()
         prev_boxes.sort()
         if str(boxes) != str(prev_boxes):
             return FLOOR_COST
         
-        #if its neither a goal, a deadlock nor moved a box return the cost of a keeper move
+        #if its neither a goal nor moved a box return the cost of a keeper move
         return KEEPER_MOVE_COST
+    
     def satisfies(self, current_state):
         ''' 
         RECEIVES: current state
@@ -187,7 +171,6 @@ class SokobanSolver:
         root = SearchNode(state,None,cost=0,heuristic=self.heuristic(current_state=state,method=self.method))
         self.open_nodes.put((0,root))
         open_nodes = 0
-        #print("HEURISTIC: ", self.heuristic(state,self.method))
         
         while self.open_nodes != []:
             await asyncio.sleep(0)
@@ -197,8 +180,6 @@ class SokobanSolver:
                 print("OPEN NODES ", open_nodes)
                 return self.get_path(node)
 
-            #lnewnodes = []
-            # para cada ação na lista de ações possíveis
             for action in self.actions(node.state):
                 new_state = self.result(node.state,action)
                 
@@ -220,7 +201,7 @@ class SokobanSolver:
         return None
 
     # auxiliary method for calculating deadlocks
-    def isDeadlock(self, pos, goals_position=[]):
+    def isDeadlock(self, pos):
         i_x = 0 #number of horizontal wall next to the pos i
         i_y = 0 #number of vertical wall next to the pos i
         aux = []
@@ -235,15 +216,10 @@ class SokobanSolver:
         if (i_x > 0 and i_y > 0) and (pos not in self.goals_position): # verifies if is not on a corner and if it is, make sure it's not a goal
            return True
 
-        '''for gp in goals_position:
+        '''for gp in self.goals_position:
             if(pos[0] > gp[0] and self.level_map.is_blocked((pos[0] + 1, pos[1]))) or (pos[0] < gp[0] and self.level_map.is_blocked((pos[0] - 1, pos[1]))):
-                aux.append(True)
-            else:
-                aux.append(False)
-
-            if(pos[1] > gp[1] and self.level_map.is_blocked((pos[0], pos[1] + 1))) or (pos[1] < gp[1] and self.level_map.is_blocked((pos[0] , pos[1] - 1))):
-                aux.append(True)
-            else:
-                aux.append(False)
-        
-        return all(aux)'''
+                return True
+            elif(pos[1] > gp[1] and self.level_map.is_blocked((pos[0], pos[1] + 1))) or (pos[1] < gp[1] and self.level_map.is_blocked((pos[0] , pos[1] - 1))):
+                return True'''
+            
+        return False

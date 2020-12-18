@@ -48,7 +48,9 @@ def calc_distance(position, list_of_positions, method):
         if dist < min_distance:
            min_distance = dist     
     return min_distance
-    
+
+def near_box(pos):
+    return [(pos[0]-1,pos[1]),(pos[0]+1,pos[1]),(pos[0],pos[1]-1),(pos[0],pos[1]+1)]    
 
 '''
 def isDeadlock(self, pos):
