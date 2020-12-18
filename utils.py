@@ -1,4 +1,3 @@
-#from mapa import Map
 import math
 
 def calc_next_state(current_state, direction):
@@ -48,22 +47,3 @@ def calc_distance(position, list_of_positions, method):
         if dist < min_distance:
            min_distance = dist     
     return min_distance
-
-def near_box(pos):
-    return [(pos[0]-1,pos[1]),(pos[0]+1,pos[1]),(pos[0],pos[1]-1),(pos[0],pos[1]+1)]    
-
-'''
-def isDeadlock(self, pos):
-    i_x = 0 #number of horizontal wall next to the pos i
-    i_y = 0 #number of vertical wall next to the pos i
-
-    if Map.is_blocked((pos[0] + 1, pos[1])) or Map.is_blocked((pos[0] - 1, pos[1])):
-        i_x += 1
-    
-    if Map.is_blocked((pos[0], pos[1] + 1)) or Map.is_blocked((pos[0], pos[1] - 1)):
-        i_y += 1
-    
-    if i_x > 0 and i_y > 0 and pos not in Map.empty_goals: # verifies if is not on a corner and if it is, make sure it's not a goal
-        return True
-    
-    return False '''

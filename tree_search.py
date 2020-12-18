@@ -5,7 +5,6 @@ from queue import PriorityQueue
 
 GOAL_COST = 0
 FLOOR_COST = 0.5
-MOVE_TO_BOX = 0.5
 KEEPER_MOVE_COST = 1
 
 DIRECTIONS = ["w","a","s","d"]
@@ -47,7 +46,6 @@ class SokobanSolver:
         self.deadlocks = []
         self.method = method
         self.deadlocks_pos = []
-        #self.deadlocks_pos = [(p_x, p_y) for p_x in range(level_map.hor_tiles) for p_y in range(level_map.hor_tiles) if self.isDeadlock((p_x, p_y))]
     
     # obtain the path from the initial state to the goal state
     def get_path(self,node):
@@ -84,12 +82,13 @@ class SokobanSolver:
                 -> Return a list of valid actions (directions)
         '''
         valid_directions = []
+        
         for direction in DIRECTIONS:
             next_state = calc_next_state(current_state,direction)
             keeper = next_state['keeper']
-            boxes = next_state['boxes']
-            
+            boxes = next_state['boxes']    
             valid_directions.append(direction)
+            
             # Check wether we are placing a box outside of the map or
             # placing a box on top of another box  
             if Map.is_blocked(self.level_map,keeper) or len(list(set(boxes))) < len (boxes):
@@ -97,7 +96,6 @@ class SokobanSolver:
                 continue
             
             for box in boxes:
-                ''' Estas verificações não poupam grande coisa em termo de nós abertos '''
                 if box in self.deadlocks_pos:
                     valid_directions.remove(direction)
                     continue          
@@ -106,17 +104,20 @@ class SokobanSolver:
                     self.deadlocks.append(next_state)
                     valid_directions.remove(direction)
                 # ver se ponho boxes umas ao lado das outras
-                # ver se encosto a uma parede                    
+                # ver se encosto a uma parede
+                                  
         return list(set(valid_directions))
     
 
-    def heuristic(self, current_state,cost=3,method='manhatan'):
+    def heuristic(self, current_state,cost=1,method='manhatan'):
         keeper = current_state['keeper']
         boxes = current_state['boxes']
         goals = current_state['goals']
         heuristic = calc_distance(keeper,boxes,method)
+        
         for box in boxes:
             heuristic += calc_distance(box,goals,method)
+        
         return heuristic*cost
         
         
@@ -137,9 +138,6 @@ class SokobanSolver:
         for box in boxes:
             if box in self.goals_position:
                 return GOAL_COST
-            # com isto comentado expande mais nos mas encontra caminhos mais curtos
-            #if next_state['keeper'] in near_box(box):
-            #    return MOVE_TO_BOX
             
         # if we moved a box into a normal floor tile    
         boxes.sort()
@@ -202,9 +200,8 @@ class SokobanSolver:
 
     # auxiliary method for calculating deadlocks
     def isDeadlock(self, pos):
-        i_x = 0 #number of horizontal wall next to the pos i
-        i_y = 0 #number of vertical wall next to the pos i
-        #aux = []
+        i_x = 0
+        i_y = 0
 
         if self.level_map.is_blocked(pos):
             return True

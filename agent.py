@@ -1,9 +1,7 @@
 import asyncio
-
 from tree_search import SokobanSolver
 from mapa import Map
 from consts import Tiles
-
 
 class SokobanAgent:
     
@@ -17,10 +15,8 @@ class SokobanAgent:
         
     def search(self):
         '''
-            Passes 2 dictionaries to the SokobanSolver's search function:
+            Passes 1 dictionary to the SokobanSolver's search function:
                 -> initial_state = {'boxes': self.boxes, 'keeper': self.keeper, 'goals':self.goals}
-                -> goal_state = {'boxes': self.goals,'goals':self.goals}
-            
             Returns the sequence of moves to be made by the keeper.
         '''
         moves = self.path_finder.search(self.initial_state)
